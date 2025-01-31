@@ -93,12 +93,16 @@ window.mekApp = (function() {
 
     const heading = ssElement.querySelector('.ss-intro_heading');
     if (!heading) return;
+
+    gsap.set(ssElement, {
+      y: '-25vh' // Adjust this value to position it higher or lower
+    });
     
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: ssElement,
         start: "top top",
-        end: "+=6500px", 
+        end: "+=4500px", 
         pin: true,
         pinSpacing: false,
         scrub: 0.5,
@@ -118,30 +122,33 @@ window.mekApp = (function() {
 
     resizeObserver.observe(document.body);
 
+    tl.set({}, {duration: 0.75}); 
+
     tl.to(circle, {
       width: '150vmax',
       height: '150vmax',
-      duration: 0.5,
+      duration: 0.25,
       ease: "power2.in"
-    },0.1)
+    },0)
 
     tl.to(circle, {
       width: '0vmax',
       height: '0vmax',
-      duration: 0.5,
+      duration: 0.175,
       ease: "linear"
-    },0.85)
+    },0.45)
 
     tl.to(heading, {
       opacity: 0,
-      duration: 0.1,
+      duration: 0.01,
       ease: "linear"
-    },0.85)
+    },0.4)
     
     .to(hugeText, {
       transform: 'translateX(calc(-100% - 115vw))',
-      duration: 1.25,
-    }, 0.25);
+      duration: 0.65,
+      ease: "slow"
+    }, 0.1);
   }
 
     function setupTextAnimations() {
@@ -167,7 +174,7 @@ window.mekApp = (function() {
             trigger: element,
             start: "top 95%", // adjust as needed
             end: "top 5%", 
-            toggleActions: "play none play reverse"
+            toggleActions: "play none none reverse"
           }
         });
         
