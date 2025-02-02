@@ -372,24 +372,12 @@ window.mekApp = (function () {
     const altCursors = document.querySelectorAll("[data-alt-cursor]");
     if (!altCursors.length) return;
 
-    // Create a throttle function for performance
-    const throttle = (func, limit) => {
-      let inThrottle;
-      return function (e) {
-        if (!inThrottle) {
-          func(e);
-          inThrottle = true;
-          setTimeout(() => (inThrottle = false), limit);
-        }
-      };
-    };
-
     altCursors.forEach((cursor) => {
       const parent =
         cursor.closest("[data-alt-cursor-parent]") || cursor.parentElement;
       if (!parent) return;
 
-      // Check for video within parent
+      // Check for video within parent  
       const video = parent.querySelector("[data-vimeo-video]");
 
       // Set initial styles once
@@ -399,10 +387,10 @@ window.mekApp = (function () {
       cursor.style.width = "auto";
       cursor.style.minWidth = "max-content";
       cursor.style.whiteSpace = "nowrap";
-      cursor.style.transition =
-        "transform 0.1s ease-out, left 0.1s ease-out, top 0.1s ease-out";
+      cursor.style.willChange = "transform, left, top";
+      cursor.style.transition = "transform 0.1s ease-out";
 
-      // Update cursor position
+      // Update cursor position using transform instead of left/top
       const updateCursorPosition = (e) => {
         if (!cursor.classList.contains("active")) return;
         if (video && video.classList.contains("visible")) return;
@@ -419,26 +407,36 @@ window.mekApp = (function () {
 
         const y = e.clientY - rect.top;
 
-        cursor.style.left = `${x}px`;
-        cursor.style.top = `${y}px`;
+        // Use transform for smoother animation
+        cursor.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(1)`;
       };
 
-      // Add event listeners with performance optimizations
+      // Debounce mousemove for better performance
+      let frame;
+      const smoothMove = (e) => {
+        if (frame) {
+          cancelAnimationFrame(frame);
+        }
+        frame = requestAnimationFrame(() => {
+          updateCursorPosition(e);
+        });
+      };
+
       parent.addEventListener("mouseenter", (e) => {
         if (video && video.classList.contains("visible")) return;
 
         const rect = parent.getBoundingClientRect();
-        cursor.style.left = `${e.clientX - rect.left}px`;
-        cursor.style.top = `${e.clientY - rect.top}px`;
-
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        cursor.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(1)`;
         cursor.classList.add("active");
-        cursor.style.transform = "scale(1) translate(-50%, -50%)";
       });
 
-      parent.addEventListener("mousemove", throttle(updateCursorPosition, 10));
+      parent.addEventListener("mousemove", smoothMove);
 
       parent.addEventListener("mouseleave", () => {
-        cursor.style.transform = "scale(0) translate(-50%, -50%)";
+        cursor.style.transform = "translate(-50%, -50%) scale(0)";
         cursor.classList.remove("active");
         parent.style.cursor = "";
       });
