@@ -579,65 +579,65 @@ window.mekApp = (function () {
 
     // Background color scroll effects
     gsap.utils.toArray("[data-bg-scroll]").forEach((element) => {
-      const bgColor = getComputedStyle(element).backgroundColor;
-      const defaultColor = element.dataset.bgPreload || "#ffffff";
-
-      // Find matching elements within this data-bg-scroll element
-      const matchingElements = [...element.querySelectorAll("*")].filter(
-        (el) => getComputedStyle(el).backgroundColor === bgColor
+      const cssVariable = element.dataset.bgScroll; // Gets var(--special--color-switcher)
+      const defaultColor = element.dataset.bgPreload; // Gets hex/rgb/rgba value
+      
+      // Set initial CSS variable value on page load
+      document.documentElement.style.setProperty(
+        cssVariable.replace('var(', '').replace(')', ''), 
+        defaultColor
       );
-
-      // Find child elements that should change text/bg color
-      const textChildren = element.querySelectorAll(
-        "[data-bg-scroll-child-text]"
-      );
-      const bgChildren = element.querySelectorAll("[data-bg-scroll-child-bg]");
-
-      gsap.set([element, ...matchingElements], {
-        backgroundColor: defaultColor,
-      });
-      gsap.set("body", { backgroundColor: defaultColor }); // Set initial body color
-
-      // Single scroll trigger with reusable animation function
-      const animateBackgrounds = (color, includeBody = false) => {
-        const targets = [element, ...matchingElements];
-
-        gsap.to(targets, {
-          backgroundColor: color,
-          duration: 0.6,
-          ease: "power2.out",
-        });
-
-        // Always animate body separately to ensure proper color transition
-        gsap.to("body", {
-          backgroundColor: includeBody ? color : defaultColor,
-          duration: 0.6,
-          ease: "power2.out",
-        });
-
-        // Animate text color of child elements
-        gsap.to(textChildren, {
-          color: color,
-          duration: 0.6,
-          ease: "power2.out",
-        });
-
-        // Animate background color of child elements
-        gsap.to(bgChildren, {
-          backgroundColor: color,
-          duration: 0.6,
-          ease: "power2.out",
-        });
-      };
 
       ScrollTrigger.create({
         trigger: element,
         start: "top center",
         end: "bottom 30%",
-        onEnter: () => animateBackgrounds(bgColor, true),
-        onLeave: () => animateBackgrounds(defaultColor, true),
-        onEnterBack: () => animateBackgrounds(bgColor, true),
-        onLeaveBack: () => animateBackgrounds(defaultColor, true),
+        onEnter: () => {
+          // Add inline style to body using CSS variable
+          document.body.style.backgroundColor = cssVariable;
+          
+          // Get the target color from element's background-color
+          const targetColor = getComputedStyle(element).backgroundColor;
+          
+          // Update CSS variable value
+          document.documentElement.style.setProperty(
+            cssVariable.replace('var(', '').replace(')', ''),
+            targetColor
+          );
+        },
+        onLeave: () => {
+          // Remove inline style from body
+          document.body.style.removeProperty('background-color');
+          
+          // Reset CSS variable to default
+          document.documentElement.style.setProperty(
+            cssVariable.replace('var(', '').replace(')', ''),
+            defaultColor
+          );
+        },
+        onEnterBack: () => {
+          // Add inline style to body using CSS variable
+          document.body.style.backgroundColor = cssVariable;
+          
+          // Get the target color from element's background-color  
+          const targetColor = getComputedStyle(element).backgroundColor;
+          
+          // Update CSS variable value
+          document.documentElement.style.setProperty(
+            cssVariable.replace('var(', '').replace(')', ''),
+            targetColor
+          );
+        },
+        onLeaveBack: () => {
+          // Remove inline style from body
+          document.body.style.removeProperty('background-color');
+          
+          // Reset CSS variable to default
+          document.documentElement.style.setProperty(
+            cssVariable.replace('var(', '').replace(')', ''),
+            defaultColor
+          );
+        }
       });
     });
   }
