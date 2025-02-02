@@ -10,81 +10,244 @@ window.mekApp = (function () {
   let ticking = false; // To optimize scroll event handling
 
   function init() {
+    // Setup before load
     setupNavListeners();
     setupScrollBehavior();
-    setupCustomSelects();
     initializeScrollEffects();
     setupHomeScrollAnimation();
-    setupSSAnimation();
+    
+    // Phase 2 - loading animation
     loadInAnimation();
-    document.body.classList.add("loaded");
+
+    // Phase 3 - Deferred setup
+    setupVideoElements();
+    setupAltCursors();
+    setupSSAnimation(); 
+    setupCustomSelects();
   }
 
   function loadInAnimation() {
-    // Cache DOM elements and constants
-    const loadingText = document.getElementById("loadingtext_num");
     const loadingEl = document.getElementById("loading");
-    const ANIM_DURATION = 1750;
-    const EXIT_DELAY = 300;
-    const ANIMATION_START_DELAY = 300;
-    const FINISH_DELAY = 300;
 
-    // Use a single state object to reduce variables
-    const state = {
-      pageLoaded: false,
-      progressComplete: false,
-      startTime: null
-    };
+    if (loadingEl) {
+      // Cache DOM elements and constants
+      const loadingText = document.getElementById("loadingtext_num");
+      const ANIM_DURATION = 1500;
+      const EXIT_DELAY = 300;
+      const ANIMATION_START_DELAY = 0;
+      const FINISH_DELAY = 0;
 
-    // Easing function for smoother animation
-    function easeOutQuad(t) {
-      return t * (2 - t);
-    }
+      // Use a single state object to reduce variables
+      const state = {
+        pageLoaded: false,
+        progressComplete: false,
+        startTime: null,
+      };
 
-    // Optimized animation function using timestamps
-    function animateProgress(timestamp) {
-      if (!loadingText) return;
-
-      if (!state.startTime) {
-        state.startTime = timestamp + ANIMATION_START_DELAY;
+      // Easing function for smoother animation
+      function easeOutQuad(t) {
+        return t * (2 - t);
       }
 
-      const elapsed = timestamp - state.startTime;
-      
-      if (elapsed < 0) {
-        requestAnimationFrame(animateProgress);
-        return;
+      // Optimized animation function using timestamps
+      function animateProgress(timestamp) {
+        if (!loadingText) return;
+
+        if (!state.startTime) {
+          state.startTime = timestamp + ANIMATION_START_DELAY;
+        }
+
+        const elapsed = timestamp - state.startTime;
+
+        if (elapsed < 0) {
+          requestAnimationFrame(animateProgress);
+          return;
+        }
+
+        const progress = Math.min(1, elapsed / ANIM_DURATION);
+        const easedProgress = easeOutQuad(progress);
+        const value = Math.min(100, Math.floor(easedProgress * 100));
+
+        loadingText.textContent = value;
+
+        if (value < 100) {
+          requestAnimationFrame(animateProgress);
+        } else {
+          state.progressComplete = true;
+          setTimeout(closeLoader, FINISH_DELAY);
+        }
       }
 
-      const progress = Math.min(1, elapsed / ANIM_DURATION);
-      const easedProgress = easeOutQuad(progress);
-      const value = Math.min(100, Math.floor(easedProgress * 100));
-      
-      loadingText.textContent = value;
+      // Optimized loader closing function
+      function closeLoader() {
+        if (!loadingEl) return;
 
-      if (value < 100) {
-        requestAnimationFrame(animateProgress);
-      } else {
-        state.progressComplete = true;
-        setTimeout(closeLoader, FINISH_DELAY);
+        loadingEl.style.transform = "translateY(-100%)";
+        setTimeout(() => {
+          loadingEl.style.display = "none";
+          completeLoad();
+        }, EXIT_DELAY);
       }
-    }
 
-    // Optimized loader closing function
-    function closeLoader() {
-      if (!loadingEl) return;
-      
-      loadingEl.style.transform = "translateY(-100%)";
-      setTimeout(() => {
-        loadingEl.style.display = "none";
-        document.body.classList.add("loaded");
-      }, EXIT_DELAY);
+      // Start animation
+      requestAnimationFrame(animateProgress);
+    } else {
+      completeLoad();
     }
+  }
 
-    // Start animation
-    requestAnimationFrame(animateProgress);
+  function completeLoad() {
     setupLogoAnimation();
     setupTextAnimations();
+    setupLoadInAnimations();
+    setTimeout(() => document.body.classList.add("loaded"), 50);
+  }
+
+  function setupLoadInAnimations() {
+    const loadElements = document.querySelectorAll("[data-load]");
+
+    loadElements.forEach((element) => {
+      const animationType = element.getAttribute("data-load");
+      const duration = element.getAttribute("data-load-time") || 300;
+      const startPosition = element.getAttribute("data-load-position") || "50%";
+      const delay = element.getAttribute("data-load-delay") || 0;
+
+      // Create timeline for each element
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: element,
+          start: "top bottom",
+          toggleActions: "play none none none",
+        },
+      });
+
+      // Set initial state
+      tl.set(element, {
+        opacity: 0,
+        y: animationType === "move" ? startPosition : 0,
+      });
+
+      // Add animation
+      tl.to(element, {
+        opacity: 1,
+        y: animationType === "move" ? 0 : 0,
+        duration: duration / 1000,
+        delay: delay / 1000,
+        ease: "power2.out",
+      });
+    });
+  }
+
+  function setupVideoElements() {
+    const videoElements = document.querySelectorAll('[data-vimeo-video]');
+    
+    // Load Vimeo Player API script
+    const script = document.createElement('script');
+    script.src = 'https://player.vimeo.com/api/player.js';
+    script.async = true;
+    
+    script.onload = () => {
+      videoElements.forEach(videoElement => {
+        // Find closest ancestor with data-vimeo-trigger
+        const trigger = videoElement.closest('[data-vimeo-trigger]');
+        if (trigger) {
+          const player = new Vimeo.Player(videoElement);
+          
+          // Find cursor parent if it exists
+          const cursorParent = videoElement.closest('[data-alt-cursor-parent]');
+          const cursor = cursorParent ? cursorParent.querySelector('[data-alt-cursor]') : null;
+          
+          trigger.addEventListener('click', () => {
+            videoElement.classList.add('visible');
+            player.play();
+            
+            // Disable cursor if it exists
+            if (cursor) {
+              cursor.style.transform = 'scale(0) translate(-50%, -50%)';
+              cursor.classList.remove('active');
+              if (cursorParent) cursorParent.style.cursor = '';
+            }
+          });
+        }
+      });
+    };
+
+    document.body.appendChild(script);
+  }
+
+  function setupAltCursors() {
+    const altCursors = document.querySelectorAll('[data-alt-cursor]');
+    if (!altCursors.length) return;
+
+    // Create a throttle function for performance
+    const throttle = (func, limit) => {
+      let inThrottle;
+      return function(e) {
+        if (!inThrottle) {
+          func(e);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    }
+
+    altCursors.forEach(cursor => {
+      const parent = cursor.closest('[data-alt-cursor-parent]') || cursor.parentElement;
+      if (!parent) return;
+
+      // Check for video within parent
+      const video = parent.querySelector('[data-vimeo-video]');
+
+      // Set initial styles once
+      cursor.style.position = 'absolute';
+      cursor.style.pointerEvents = 'none';
+      cursor.style.transform = 'scale(0) translate(-50%, -50%)';
+      cursor.style.width = 'auto';
+      cursor.style.minWidth = 'max-content';
+      cursor.style.whiteSpace = 'nowrap';
+      cursor.style.transition = 'transform 0.3s ease-out, left 0.1s ease-out, top 0.1s ease-out';
+
+      // Update cursor position
+      const updateCursorPosition = (e) => {
+        if (!cursor.classList.contains('active')) return;
+        if (video && video.classList.contains('visible')) return;
+        
+        const rect = parent.getBoundingClientRect();
+        const cursorRect = cursor.getBoundingClientRect();
+        const halfWidth = cursorRect.width / 2;
+        
+        // Calculate constrained position
+        let x = e.clientX - rect.left;
+        const minX = halfWidth;
+        const maxX = rect.width - halfWidth;
+        x = Math.min(Math.max(x, minX), maxX);
+        
+        const y = e.clientY - rect.top;
+        
+        cursor.style.left = `${x}px`;
+        cursor.style.top = `${y}px`;
+      };
+
+      // Add event listeners with performance optimizations
+      parent.addEventListener('mouseenter', (e) => {
+        if (video && video.classList.contains('visible')) return;
+
+        const rect = parent.getBoundingClientRect();
+        cursor.style.left = `${e.clientX - rect.left}px`;
+        cursor.style.top = `${e.clientY - rect.top}px`;
+        
+        cursor.classList.add('active');
+        cursor.style.transform = 'scale(1) translate(-50%, -50%)';
+      });
+
+      parent.addEventListener('mousemove', throttle(updateCursorPosition, 16));
+
+      parent.addEventListener('mouseleave', () => {
+        cursor.style.transform = 'scale(0) translate(-50%, -50%)';
+        cursor.classList.remove('active');
+        parent.style.cursor = '';
+      });
+    });
   }
 
   function setupHomeScrollAnimation() {
@@ -171,6 +334,9 @@ window.mekApp = (function () {
     const heading = ssElement.querySelector(".ss-intro_heading");
     if (!heading) return;
 
+    const button = ssElement.querySelector(".ss-intro_button");
+    if (!button) return;
+
     gsap.set(ssElement, {
       y: "-25vh", // Adjust this value to position it higher or lower
     });
@@ -240,6 +406,26 @@ window.mekApp = (function () {
       },
       0.1
     );
+
+    tl.to(
+      button,
+      {
+        scale: 1,
+        duration: 0.15,
+        ease: "power2.out",
+      },
+      0.2
+    );
+
+    tl.to(
+      button,
+      {
+        scale: 0,
+        duration: 0.1,
+        ease: "power2.in",
+      },
+      0.45
+    );
   }
 
   function setupTextAnimations() {
@@ -307,12 +493,41 @@ window.mekApp = (function () {
   }
 
   function setupLogoAnimation() {
-    const logoContainer = document.querySelector(
+    // Handle nav logo animation
+    const navLogoContainer = document.querySelector(
       '[data-wf--menu--style="home"] .nav_logo svg'
     );
-    if (!logoContainer || window.scrollY > 0) return;
+    if (navLogoContainer && window.scrollY === 0) {
+      animateLogo(navLogoContainer);
+    }
 
-    const paths = Array.from(logoContainer.querySelectorAll("path")).reverse();
+    // Handle footer logo animation
+    const footerLogoContainer = document.querySelector('.footer_logo svg');
+    if (footerLogoContainer) {
+      gsap.fromTo(
+        footerLogoContainer.querySelectorAll("path"),
+        {
+          opacity: 0,
+          y: "100%",
+        },
+        {
+          opacity: 1,
+          y: "0%",
+          duration: 0.45,
+          ease: "power1.out",
+          stagger: 0.025,
+          scrollTrigger: {
+            trigger: footerLogoContainer,
+            start: "top 110%",
+            toggleActions: "play none none none"
+          }
+        }
+      );
+    }
+  }
+
+  function animateLogo(container) {
+    const paths = Array.from(container.querySelectorAll("path")).reverse();
     paths.forEach((path, index) => {
       gsap.fromTo(
         path,
