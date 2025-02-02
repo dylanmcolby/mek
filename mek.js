@@ -21,6 +21,7 @@ window.mekApp = (function () {
 
     // Phase 3 - Deferred setup
     setupVideoElements();
+    setupScrollEncourager();
     setupAltCursors();
     setupSSAnimation();
     setupCustomSelects();
@@ -36,7 +37,7 @@ window.mekApp = (function () {
       const ANIM_DURATION = 1500;
       const EXIT_DELAY = 300;
       const ANIMATION_START_DELAY = 0;
-      const FINISH_DELAY = 0;
+      const FINISH_DELAY = 150;
 
       // Use a single state object to reduce variables
       const state = {
@@ -447,6 +448,8 @@ window.mekApp = (function () {
     if (!reel) return;
     const navLogo = document.querySelector(".nav_logo");
     if (!navLogo) return;
+    const scrollEncourager = document.querySelector("#scroll-encourager");
+    if (!scrollEncourager) return;
 
     const introText = document.querySelector(".intro-text");
     if (!introText) return;
@@ -508,7 +511,26 @@ window.mekApp = (function () {
         { opacity: 1, transform: "translateY(0rem)" },
         { opacity: 0, transform: "translateY(-5rem)", duration: 0.25 },
         0
+      )
+
+      .fromTo(
+        scrollEncourager,
+        { opacity: 1 },
+        { opacity: 0, duration: 0.1 },
+        0.45 // This timing corresponds to when reel is at ~80% scale
       );
+  }
+
+  function setupScrollEncourager() {
+    const scrollEncourager = document.querySelector("#scroll-encourager");
+    if (!scrollEncourager) return;
+
+    scrollEncourager.addEventListener("click", () => {
+      window.scrollTo({
+        top: window.scrollY + window.innerHeight,
+        behavior: 'smooth'
+      });
+    });
   }
 
   function setupSSAnimation() {
@@ -527,23 +549,25 @@ window.mekApp = (function () {
     const button = ssElement.querySelector(".ss-intro_button");
     if (!button) return;
 
+    const scrollEncourager = document.querySelector("#scroll-encourager");
+    if (!scrollEncourager) return;
+
     gsap.set(ssElement, {
-      y: "-25vh", // Adjust this value to position it higher or lower
+      y: "-25vh",
     });
 
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: ssElement,
         start: "top top",
-        end: "+=4500px",
+        end: "+=5000px",
         pin: true,
         pinSpacing: false,
         scrub: 0.5,
-        invalidateOnRefresh: true, // Force refresh on resize
+        invalidateOnRefresh: true,
       },
     });
 
-    // Add resize observer with rate limiting
     let lastRefreshTime = 0;
     const resizeObserver = new ResizeObserver(() => {
       const now = Date.now();
@@ -555,17 +579,17 @@ window.mekApp = (function () {
 
     resizeObserver.observe(document.body);
 
-    tl.set({}, { duration: 0.75 });
+    tl.set({}, { duration: 0.9 });
 
     tl.to(
       circle,
       {
         width: "150vmax",
         height: "150vmax",
-        duration: 0.25,
+        duration: 0.275,
         ease: "power2.in",
       },
-      0
+      0.15
     );
 
     tl.to(
@@ -573,10 +597,10 @@ window.mekApp = (function () {
       {
         width: "0vmax",
         height: "0vmax",
-        duration: 0.175,
+        duration: 0.275,
         ease: "linear",
       },
-      0.45
+      0.6
     );
 
     tl.to(
@@ -586,35 +610,51 @@ window.mekApp = (function () {
         duration: 0.01,
         ease: "linear",
       },
-      0.4
+      0.55
     ).to(
       hugeText,
       {
         transform: "translateX(calc(-100% - 115vw))",
-        duration: 0.65,
+        duration: 0.8,
         ease: "slow",
       },
-      0.1
+      0.25
     );
 
     tl.to(
       button,
       {
         scale: 1,
-        duration: 0.15,
+        duration: 0.3,
         ease: "power2.out",
       },
-      0.2
+      0.35
     );
 
     tl.to(
       button,
       {
         scale: 0,
-        duration: 0.1,
+        duration: 0.2,
         ease: "power2.in",
       },
-      0.45
+      0.6
+    );
+
+    tl.to(
+      scrollEncourager,
+      {
+        opacity: 1,
+        duration: 0.01
+      },
+      0
+    ).to(
+      scrollEncourager,
+      {
+        opacity: 0,
+        duration: 0.025
+      },
+      0.375
     );
   }
 
@@ -763,7 +803,7 @@ window.mekApp = (function () {
         scrollTrigger: {
           trigger: group[0],
           start: "top bottom",
-          toggleActions: "play reverse restart reverse",
+          toggleActions: "play none none reverse",
         },
       });
       group.forEach((el, index) => {
@@ -812,8 +852,8 @@ window.mekApp = (function () {
       // Function to animate the CSS variable value
       const animateBackground = (toColor, onComplete) => {
         gsap.to(document.documentElement, {
-          duration: 0.6,
-          ease: "power2.out",
+          duration: 0.75,
+          ease: "linear",
           css: { [variableName]: toColor },
           onComplete: onComplete,
         });
@@ -822,7 +862,7 @@ window.mekApp = (function () {
       ScrollTrigger.create({
         trigger: element,
         start: "top center",
-        end: "bottom 30%",
+        end: "bottom 50%",
         onEnter: () => {
           // Add inline style to body
           document.body.style.backgroundColor = `var(${variableName})`;
