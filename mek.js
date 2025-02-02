@@ -205,9 +205,13 @@ window.mekApp = (function () {
         // Check if any element is in same position or consecutive with previous position
         let hasConsecutive = false;
         for (let i = 0; i < array.length; i++) {
-          if (result[i] === array[i] || 
-              (i > 0 && array.indexOf(result[i]) === array.indexOf(result[i-1]) + 1) ||
-              (i < array.length - 1 && array.indexOf(result[i]) === array.indexOf(result[i+1]) - 1)) {
+          if (
+            result[i] === array[i] ||
+            (i > 0 &&
+              array.indexOf(result[i]) === array.indexOf(result[i - 1]) + 1) ||
+            (i < array.length - 1 &&
+              array.indexOf(result[i]) === array.indexOf(result[i + 1]) - 1)
+          ) {
             hasConsecutive = true;
             break;
           }
@@ -528,7 +532,7 @@ window.mekApp = (function () {
     scrollEncourager.addEventListener("click", () => {
       window.scrollTo({
         top: window.scrollY + window.innerHeight,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     });
   }
@@ -645,14 +649,14 @@ window.mekApp = (function () {
       scrollEncourager,
       {
         opacity: 1,
-        duration: 0.01
+        duration: 0.01,
       },
       0
     ).to(
       scrollEncourager,
       {
         opacity: 0,
-        duration: 0.025
+        duration: 0.025,
       },
       0.375
     );
@@ -665,10 +669,10 @@ window.mekApp = (function () {
         charsClass: "char",
         wordsClass: "word",
       });
-  
-      gsap.set(split.chars, { opacity: 0 }); 
+
+      gsap.set(split.chars, { opacity: 0 });
       const delay = parseFloat(element.dataset.textFadeinDelay) || 0.2;
-  
+
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: element,
@@ -677,7 +681,7 @@ window.mekApp = (function () {
           toggleActions: "play none none reverse",
         },
       });
-  
+
       tl.fromTo(
         split.chars,
         { opacity: 0 },
@@ -689,14 +693,13 @@ window.mekApp = (function () {
           ease: "power2.in",
         }
       );
-  
+
       split.words.forEach((word) => {
         word.style.display = "inline-block";
         word.style.whiteSpace = "nowrap";
       });
     });
   }
-  
 
   function setupLogoAnimation() {
     // Handle nav logo animation
@@ -761,26 +764,27 @@ window.mekApp = (function () {
     });
 
     // Smooth load animations
-    gsap.utils.toArray("[data-smooth-load]:not([data-smooth-load-stagger])").forEach((element) => {
-      const yOffset = element.dataset.smoothLoad || "4.5rem";
-      gsap.fromTo(
-        element,
-        { y: yOffset, opacity: 1 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.45,
-          ease: "power2.out",
-          immediateRender: false, // <-- important
-          scrollTrigger: {
-            trigger: element,
-            start: "top bottom",
-            toggleActions: "play none none reverse",
+    gsap.utils
+      .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
+      .forEach((element) => {
+        const yOffset = element.dataset.smoothLoad || "4.5rem";
+        gsap.fromTo(
+          element,
+          { y: yOffset, opacity: 1 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.45,
+            ease: "power2.out",
+            immediateRender: false, // <-- important
+            scrollTrigger: {
+              trigger: element,
+              start: "top bottom",
+              toggleActions: "play none none reverse",
+            },
           }
-        }
-      );
-      
-    });
+        );
+      });
     // 2) Group stagger elements by their original row (approx. same 'top') and stagger left-to-right
     const staggerEls = gsap.utils.toArray(
       "[data-smooth-load][data-smooth-load-stagger]"
