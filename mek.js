@@ -395,10 +395,8 @@ window.mekApp = (function () {
       cursor.style.width = "auto";
       cursor.style.minWidth = "max-content";
       cursor.style.whiteSpace = "nowrap";
-      cursor.style.willChange = "transform, left, top"; // Add will-change for better performance
-      cursor.style.webkitTransform = "scale(0) translate(-50%, -50%)"; // Add webkit prefix
       cursor.style.transition =
-        "transform 0.3s ease-out, left 0.1s ease-out, top 0.1s ease-out, -webkit-transform 0.3s ease-out";
+        "transform 0.1s ease-out, left 0.1s ease-out, top 0.1s ease-out";
 
       // Update cursor position
       const updateCursorPosition = (e) => {
@@ -417,9 +415,8 @@ window.mekApp = (function () {
 
         const y = e.clientY - rect.top;
 
-        // Use transform3d for hardware acceleration
-        cursor.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1)`;
-        cursor.style.webkitTransform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1)`;
+        cursor.style.left = `${x}px`;
+        cursor.style.top = `${y}px`;
       };
 
       // Add event listeners with performance optimizations
@@ -427,19 +424,17 @@ window.mekApp = (function () {
         if (video && video.classList.contains("visible")) return;
 
         const rect = parent.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        cursor.style.left = `${e.clientX - rect.left}px`;
+        cursor.style.top = `${e.clientY - rect.top}px`;
 
-        cursor.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1)`;
-        cursor.style.webkitTransform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1)`;
         cursor.classList.add("active");
+        cursor.style.transform = "scale(1) translate(-50%, -50%)";
       });
 
-      parent.addEventListener("mousemove", throttle(updateCursorPosition, 16));
+      parent.addEventListener("mousemove", throttle(updateCursorPosition, 10));
 
       parent.addEventListener("mouseleave", () => {
         cursor.style.transform = "scale(0) translate(-50%, -50%)";
-        cursor.style.webkitTransform = "scale(0) translate(-50%, -50%)";
         cursor.classList.remove("active");
         parent.style.cursor = "";
       });
