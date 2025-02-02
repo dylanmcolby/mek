@@ -15,15 +15,16 @@ window.mekApp = (function () {
     setupScrollBehavior();
     initializeScrollEffects();
     setupHomeScrollAnimation();
-    
+
     // Phase 2 - loading animation
     loadInAnimation();
 
     // Phase 3 - Deferred setup
     setupVideoElements();
     setupAltCursors();
-    setupSSAnimation(); 
+    setupSSAnimation();
     setupCustomSelects();
+    setupLogoSwitcher();
   }
 
   function loadInAnimation() {
@@ -138,34 +139,221 @@ window.mekApp = (function () {
     });
   }
 
+  function setupLogoSwitcher() {
+    const logoWrappers = gsap.utils.toArray(".clients_logos-wrapper");
+    let isPageVisible = true;
+
+    // Handle page visibility changes
+    document.addEventListener("visibilitychange", () => {
+      isPageVisible = !document.hidden;
+    });
+
+    logoWrappers.forEach((wrapper) => {
+      // Set initial visibility to false
+      wrapper.isVisible = false;
+
+      // Set up ScrollTrigger to update visibility status
+      ScrollTrigger.create({
+        trigger: wrapper,
+        start: "top bottom",
+        end: "bottom top",
+        onEnter: () => {
+          wrapper.isVisible = true;
+        },
+        onLeave: () => {
+          wrapper.isVisible = false;
+        },
+        onEnterBack: () => {
+          wrapper.isVisible = true;
+        },
+        onLeaveBack: () => {
+          wrapper.isVisible = false;
+        },
+      });
+
+      // Set initial state of logos
+      const logo1 = wrapper.querySelector(".clients_logo:not(.is-alt)");
+      const logo2 = wrapper.querySelector(".clients_logo.is-alt");
+
+      // If cannot find logos, skip
+      if (!logo1 || !logo2) {
+        console.warn("Clients logos not found in wrapper:", wrapper);
+        return;
+      }
+
+      wrapper.logo1 = logo1;
+      wrapper.logo2 = logo2;
+      wrapper.isLogo1Visible = true;
+
+      gsap.set(logo1, { opacity: 1, y: "0%" });
+      gsap.set(logo2, { opacity: 0, y: "100%" });
+    });
+
+    // Function to shuffle array avoiding consecutive positions
+    function nonConsecutiveShuffle(array) {
+      const result = [...array];
+      let attempts = 0;
+      const maxAttempts = 100;
+
+      do {
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [result[i], result[j]] = [result[j], result[i]];
+        }
+
+        // Check if any element is in same position or consecutive with previous position
+        let hasConsecutive = false;
+        for (let i = 0; i < array.length; i++) {
+          if (result[i] === array[i] || 
+              (i > 0 && array.indexOf(result[i]) === array.indexOf(result[i-1]) + 1) ||
+              (i < array.length - 1 && array.indexOf(result[i]) === array.indexOf(result[i+1]) - 1)) {
+            hasConsecutive = true;
+            break;
+          }
+        }
+
+        if (!hasConsecutive) break;
+        attempts++;
+      } while (attempts < maxAttempts);
+
+      return result;
+    }
+
+    // Function to swap logos in visible wrappers
+    function swapVisibleLogos() {
+      // Don't run if page is not visible
+      if (!isPageVisible) return;
+
+      // Get visible wrappers
+      const visibleWrappers = logoWrappers.filter(
+        (wrapper) => wrapper.isVisible
+      );
+
+      if (visibleWrappers.length === 0) return;
+
+      // Get truly random order avoiding consecutive positions
+      const shuffledWrappers = nonConsecutiveShuffle(visibleWrappers);
+
+      shuffledWrappers.forEach((wrapper, i) => {
+        const delay = i * 0.05; // Consistent delay between animations
+        const duration = 0.5;
+        const opacityDuration = duration * 0.5;
+
+        // Randomize direction independently
+        const dir = Math.random() < 0.5 ? "50%" : "-50%";
+
+        const tl = gsap.timeline({ delay: delay });
+        const { logo1, logo2 } = wrapper;
+
+        if (wrapper.isLogo1Visible) {
+          // Animate both logos simultaneously
+          tl.to(
+            logo1,
+            {
+              opacity: 0,
+              duration: opacityDuration,
+              ease: "power4.Out",
+            },
+            0
+          )
+            .to(
+              logo1,
+              {
+                y: dir,
+                duration: duration,
+                ease: "power4.Out",
+              },
+              0
+            )
+            .fromTo(
+              logo2,
+              {
+                y: dir,
+                opacity: 0,
+              },
+              {
+                y: "0%",
+                opacity: 1,
+                duration: duration,
+                ease: "power4.Out",
+              },
+              0
+            );
+        } else {
+          // Animate both logos simultaneously
+          tl.to(
+            logo2,
+            {
+              opacity: 0,
+              duration: opacityDuration,
+              ease: "power4.Out",
+            },
+            0
+          )
+            .to(
+              logo2,
+              {
+                y: dir,
+                duration: duration,
+                ease: "power4.Out",
+              },
+              0
+            )
+            .fromTo(
+              logo1,
+              {
+                y: dir,
+                opacity: 0,
+              },
+              {
+                y: "0%",
+                opacity: 1,
+                duration: duration,
+                ease: "power4.Out",
+              },
+              0
+            );
+        }
+
+        // Swap isLogo1Visible flag
+        wrapper.isLogo1Visible = !wrapper.isLogo1Visible;
+      });
+    }
+
+    // Run swapVisibleLogos every 3500ms
+    setInterval(swapVisibleLogos, 3500);
+  }
+
   function setupVideoElements() {
-    const videoElements = document.querySelectorAll('[data-vimeo-video]');
-    
+    const videoElements = document.querySelectorAll("[data-vimeo-video]");
+
     // Load Vimeo Player API script
-    const script = document.createElement('script');
-    script.src = 'https://player.vimeo.com/api/player.js';
+    const script = document.createElement("script");
+    script.src = "https://player.vimeo.com/api/player.js";
     script.async = true;
-    
+
     script.onload = () => {
-      videoElements.forEach(videoElement => {
+      videoElements.forEach((videoElement) => {
         // Find closest ancestor with data-vimeo-trigger
-        const trigger = videoElement.closest('[data-vimeo-trigger]');
+        const trigger = videoElement.closest("[data-vimeo-trigger]");
         if (trigger) {
           const player = new Vimeo.Player(videoElement);
-          
+
           // Find cursor parent if it exists
-          const cursorParent = videoElement.closest('[data-alt-cursor-parent]');
-          const cursor = cursorParent ? cursorParent.querySelector('[data-alt-cursor]') : null;
-          
-          trigger.addEventListener('click', () => {
-            videoElement.classList.add('visible');
+          const cursorParent = videoElement.closest("[data-alt-cursor-parent]");
+          const cursor = cursorParent
+            ? cursorParent.querySelector("[data-alt-cursor]")
+            : null;
+
+          trigger.addEventListener("click", () => {
+            videoElement.classList.add("visible");
             player.play();
-            
+
             // Disable cursor if it exists
             if (cursor) {
-              cursor.style.transform = 'scale(0) translate(-50%, -50%)';
-              cursor.classList.remove('active');
-              if (cursorParent) cursorParent.style.cursor = '';
+              cursor.style.transform = "scale(0) translate(-50%, -50%)";
+              cursor.classList.remove("active");
+              if (cursorParent) cursorParent.style.cursor = "";
             }
           });
         }
@@ -176,76 +364,78 @@ window.mekApp = (function () {
   }
 
   function setupAltCursors() {
-    const altCursors = document.querySelectorAll('[data-alt-cursor]');
+    const altCursors = document.querySelectorAll("[data-alt-cursor]");
     if (!altCursors.length) return;
 
     // Create a throttle function for performance
     const throttle = (func, limit) => {
       let inThrottle;
-      return function(e) {
+      return function (e) {
         if (!inThrottle) {
           func(e);
           inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
+          setTimeout(() => (inThrottle = false), limit);
         }
-      }
-    }
+      };
+    };
 
-    altCursors.forEach(cursor => {
-      const parent = cursor.closest('[data-alt-cursor-parent]') || cursor.parentElement;
+    altCursors.forEach((cursor) => {
+      const parent =
+        cursor.closest("[data-alt-cursor-parent]") || cursor.parentElement;
       if (!parent) return;
 
       // Check for video within parent
-      const video = parent.querySelector('[data-vimeo-video]');
+      const video = parent.querySelector("[data-vimeo-video]");
 
       // Set initial styles once
-      cursor.style.position = 'absolute';
-      cursor.style.pointerEvents = 'none';
-      cursor.style.transform = 'scale(0) translate(-50%, -50%)';
-      cursor.style.width = 'auto';
-      cursor.style.minWidth = 'max-content';
-      cursor.style.whiteSpace = 'nowrap';
-      cursor.style.transition = 'transform 0.3s ease-out, left 0.1s ease-out, top 0.1s ease-out';
+      cursor.style.position = "absolute";
+      cursor.style.pointerEvents = "none";
+      cursor.style.transform = "scale(0) translate(-50%, -50%)";
+      cursor.style.width = "auto";
+      cursor.style.minWidth = "max-content";
+      cursor.style.whiteSpace = "nowrap";
+      cursor.style.transition =
+        "transform 0.3s ease-out, left 0.1s ease-out, top 0.1s ease-out";
 
       // Update cursor position
       const updateCursorPosition = (e) => {
-        if (!cursor.classList.contains('active')) return;
-        if (video && video.classList.contains('visible')) return;
-        
+        if (!cursor.classList.contains("active")) return;
+        if (video && video.classList.contains("visible")) return;
+
         const rect = parent.getBoundingClientRect();
         const cursorRect = cursor.getBoundingClientRect();
         const halfWidth = cursorRect.width / 2;
-        
+
         // Calculate constrained position
         let x = e.clientX - rect.left;
         const minX = halfWidth;
         const maxX = rect.width - halfWidth;
         x = Math.min(Math.max(x, minX), maxX);
-        
+
         const y = e.clientY - rect.top;
-        
+
         cursor.style.left = `${x}px`;
         cursor.style.top = `${y}px`;
       };
 
       // Add event listeners with performance optimizations
-      parent.addEventListener('mouseenter', (e) => {
-        if (video && video.classList.contains('visible')) return;
+      parent.addEventListener("mouseenter", (e) => {
+        if (video && video.classList.contains("visible")) return;
 
         const rect = parent.getBoundingClientRect();
         cursor.style.left = `${e.clientX - rect.left}px`;
         cursor.style.top = `${e.clientY - rect.top}px`;
-        
-        cursor.classList.add('active');
-        cursor.style.transform = 'scale(1) translate(-50%, -50%)';
+
+        cursor.classList.add("active");
+        cursor.style.transform = "scale(1) translate(-50%, -50%)";
       });
 
-      parent.addEventListener('mousemove', throttle(updateCursorPosition, 16));
+      parent.addEventListener("mousemove", throttle(updateCursorPosition, 16));
 
-      parent.addEventListener('mouseleave', () => {
-        cursor.style.transform = 'scale(0) translate(-50%, -50%)';
-        cursor.classList.remove('active');
-        parent.style.cursor = '';
+      parent.addEventListener("mouseleave", () => {
+        cursor.style.transform = "scale(0) translate(-50%, -50%)";
+        cursor.classList.remove("active");
+        parent.style.cursor = "";
       });
     });
   }
@@ -429,68 +619,44 @@ window.mekApp = (function () {
   }
 
   function setupTextAnimations() {
-    // Handle text fade in animations
     document.querySelectorAll("[data-text-fadein]").forEach((element) => {
       const split = new SplitText(element, {
         type: "chars, words",
         charsClass: "char",
         wordsClass: "word",
       });
-
-      // Check if element is in viewport on load
-      const rect = element.getBoundingClientRect();
-      const isInViewport = rect.top >= 0 && rect.top <= window.innerHeight;
-
-      // Get delay from data attribute or use default
-      const delay = element.dataset.textFadeinDelay
-        ? element.dataset.textFadeinDelay
-        : 0.2;
-
-      // Create animation timeline
+  
+      gsap.set(split.chars, { opacity: 0 }); 
+      const delay = parseFloat(element.dataset.textFadeinDelay) || 0.2;
+  
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: element,
-          start: "top 95%", // adjust as needed
+          start: "top 95%",
           end: "top 5%",
           toggleActions: "play none none reverse",
         },
       });
-
+  
       tl.fromTo(
         split.chars,
+        { opacity: 0 },
         {
-          opacity: 0,
-        },
-        {
-          duration: function () {
-            // Faster duration on reverse
-            return tl.reversed() ? 0.1 : 0.5;
-          },
+          duration: 0.5,
           opacity: 1,
-          stagger: 0.01, // Keep stagger consistent for both directions
-          delay: function () {
-            // No delay on reverse
-            return tl.reversed() ? 0 : delay;
-          },
+          stagger: 0.01,
+          delay,
           ease: "power2.in",
         }
       );
-
-      // Add CSS to prevent word breaks
+  
       split.words.forEach((word) => {
         word.style.display = "inline-block";
         word.style.whiteSpace = "nowrap";
       });
-
-      if (isInViewport) {
-        // If element is in viewport on load, play animation immediately
-        tl.play();
-      } else {
-        // If element is not in viewport, set initial state and enable scroll trigger
-        split.chars.forEach((char) => gsap.set(char, { opacity: 0 }));
-      }
     });
   }
+  
 
   function setupLogoAnimation() {
     // Handle nav logo animation
@@ -502,10 +668,10 @@ window.mekApp = (function () {
     }
 
     // Handle footer logo animation
-    const footerLogoContainer = document.querySelector('.footer_logo svg');
+    const footerLogoContainer = document.querySelector(".footer_logo svg");
     if (footerLogoContainer) {
       gsap.fromTo(
-        footerLogoContainer.querySelectorAll("path"),
+        Array.from(footerLogoContainer.querySelectorAll("path")).reverse(),
         {
           opacity: 0,
           y: "100%",
@@ -513,14 +679,14 @@ window.mekApp = (function () {
         {
           opacity: 1,
           y: "0%",
-          duration: 0.45,
+          duration: 0.6,
           ease: "power1.out",
-          stagger: 0.025,
+          stagger: 0.03,
           scrollTrigger: {
             trigger: footerLogoContainer,
             start: "top 110%",
-            toggleActions: "play none none none"
-          }
+            toggleActions: "play reverse play reverse", // Changed to handle scroll out and back in
+          },
         }
       );
     }
@@ -555,89 +721,142 @@ window.mekApp = (function () {
     });
 
     // Smooth load animations
-    gsap.utils.toArray("[data-smooth-load]").forEach((element) => {
+    gsap.utils.toArray("[data-smooth-load]:not([data-smooth-load-stagger])").forEach((element) => {
       const yOffset = element.dataset.smoothLoad || "4.5rem";
       gsap.fromTo(
         element,
-        {
-          y: yOffset,
-          opacity: 1,
-        },
+        { y: yOffset, opacity: 1 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.65,
+          duration: 0.45,
           ease: "power2.out",
+          immediateRender: false, // <-- important
           scrollTrigger: {
             trigger: element,
             start: "top bottom",
             toggleActions: "play none none reverse",
-          },
+          }
         }
       );
+      
+    });
+    // 2) Group stagger elements by their original row (approx. same 'top') and stagger left-to-right
+    const staggerEls = gsap.utils.toArray(
+      "[data-smooth-load][data-smooth-load-stagger]"
+    );
+    const groups = {};
+    staggerEls.forEach((el) => {
+      const top = Math.round(el.getBoundingClientRect().top);
+      groups[top] = groups[top] || [];
+      groups[top].push(el);
+    });
+    Object.values(groups).forEach((group) => {
+      // Sort left-to-right
+      group.sort(
+        (a, b) =>
+          a.getBoundingClientRect().left - b.getBoundingClientRect().left
+      );
+      const yOffset = group[0].dataset.smoothLoad || "4.5rem";
+      // Create a timeline per row
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: group[0],
+          start: "top bottom",
+          toggleActions: "play reverse restart reverse",
+        },
+      });
+      group.forEach((el, index) => {
+        tl.fromTo(
+          el,
+          { y: yOffset, opacity: 1 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.45 + index * 0.25, // Each element animates 100ms longer than the previous one
+            ease: "power2.out",
+            immediateRender: false, // <-- important
+          },
+          0
+        );
+      });
     });
 
+    // Start of Selection
     // Background color scroll effects
     gsap.utils.toArray("[data-bg-scroll]").forEach((element) => {
-      const cssVariable = element.dataset.bgScroll; // Gets var(--special--color-switcher)
-      const defaultColor = element.dataset.bgPreload; // Gets hex/rgb/rgba value
-      
-      // Set initial CSS variable value on page load
-      document.documentElement.style.setProperty(
-        cssVariable.replace('var(', '').replace(')', ''), 
-        defaultColor
-      );
+      const cssVariable = element.getAttribute("data-bg-scroll"); // e.g., "var(--variable-name)"
+
+      // Extract the CSS variable name
+      const variableNameMatch = cssVariable.match(/var\((--[^)]+)\)/);
+      if (!variableNameMatch) {
+        console.error(`Invalid CSS variable in data-bg-scroll: ${cssVariable}`);
+        return;
+      }
+      const variableName = variableNameMatch[1];
+
+      // Get the original value of the CSS variable
+      const computedStyle = getComputedStyle(document.documentElement);
+      const originalColor =
+        computedStyle.getPropertyValue(variableName).trim() || "#000000";
+
+      // Get default color from data-bg-preload or default to "#ffffff"
+      const defaultColor = element.getAttribute("data-bg-preload") || "#ffffff";
+
+      // Set the CSS variable to default color initially
+      document.documentElement.style.setProperty(variableName, defaultColor);
+
+      // Flag to track if background-color is set on body
+      let isBodyBgSet = false;
+
+      // Function to animate the CSS variable value
+      const animateBackground = (toColor, onComplete) => {
+        gsap.to(document.documentElement, {
+          duration: 0.6,
+          ease: "power2.out",
+          css: { [variableName]: toColor },
+          onComplete: onComplete,
+        });
+      };
 
       ScrollTrigger.create({
         trigger: element,
         start: "top center",
         end: "bottom 30%",
         onEnter: () => {
-          // Add inline style to body using CSS variable
-          document.body.style.backgroundColor = cssVariable;
-          
-          // Get the target color from element's background-color
-          const targetColor = getComputedStyle(element).backgroundColor;
-          
-          // Update CSS variable value
-          document.documentElement.style.setProperty(
-            cssVariable.replace('var(', '').replace(')', ''),
-            targetColor
-          );
+          // Add inline style to body
+          document.body.style.backgroundColor = `var(${variableName})`;
+          isBodyBgSet = true;
+          // Animate CSS variable from defaultColor to originalColor
+          animateBackground(originalColor);
         },
         onLeave: () => {
-          // Remove inline style from body
-          document.body.style.removeProperty('background-color');
-          
-          // Reset CSS variable to default
-          document.documentElement.style.setProperty(
-            cssVariable.replace('var(', '').replace(')', ''),
-            defaultColor
-          );
+          // Animate CSS variable from originalColor back to defaultColor
+          animateBackground(defaultColor, () => {
+            // Remove inline style from body
+            if (isBodyBgSet) {
+              document.body.style.backgroundColor = "";
+              isBodyBgSet = false;
+            }
+          });
         },
         onEnterBack: () => {
-          // Add inline style to body using CSS variable
-          document.body.style.backgroundColor = cssVariable;
-          
-          // Get the target color from element's background-color  
-          const targetColor = getComputedStyle(element).backgroundColor;
-          
-          // Update CSS variable value
-          document.documentElement.style.setProperty(
-            cssVariable.replace('var(', '').replace(')', ''),
-            targetColor
-          );
+          // Add inline style to body
+          document.body.style.backgroundColor = `var(${variableName})`;
+          isBodyBgSet = true;
+          // Animate CSS variable from defaultColor to originalColor
+          animateBackground(originalColor);
         },
         onLeaveBack: () => {
-          // Remove inline style from body
-          document.body.style.removeProperty('background-color');
-          
-          // Reset CSS variable to default
-          document.documentElement.style.setProperty(
-            cssVariable.replace('var(', '').replace(')', ''),
-            defaultColor
-          );
-        }
+          // Animate CSS variable from originalColor back to defaultColor
+          animateBackground(defaultColor, () => {
+            // Remove inline style from body
+            if (isBodyBgSet) {
+              document.body.style.backgroundColor = "";
+              isBodyBgSet = false;
+            }
+          });
+        },
       });
     });
   }
