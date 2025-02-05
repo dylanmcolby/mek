@@ -1200,7 +1200,7 @@ window.mekApp = (function () {
         effects: true,
         normalizeScroll: true,
       });
-    }
+    
 
     // Smooth load animations
     gsap.utils
@@ -1264,6 +1264,8 @@ window.mekApp = (function () {
         );
       });
     });
+
+  }
 
     // Start of Selection
     // Background color scroll effects
