@@ -1314,6 +1314,10 @@ window.mekApp = (function () {
     }
   }
 
+  function setupBgVideos() {
+    
+  }
+
   function setupBgScroll() {
     const bgTriggers = gsap.utils.toArray("[data-bg-trigger]");
     const bgElements = document.querySelectorAll("[data-bg-element]");
