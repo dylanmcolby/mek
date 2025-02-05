@@ -795,6 +795,9 @@ window.mekApp = (function () {
   }
 
   function setupHomeScrollAnimation() {
+    // Enable normalized scrolling with nested scroll support
+    ScrollTrigger.normalizeScroll({ allowNestedScroll: true });
+
     const scrollAnimElement = document.querySelector("#home-scroll-anim");
     if (!scrollAnimElement) return;
     const reel = document.querySelector("#home-scroll-anim-reel");
@@ -815,9 +818,9 @@ window.mekApp = (function () {
       scrollTrigger: {
         trigger: scrollAnimElement,
         start: "top top",
-        end: isMobile ? "bottom bottom" : "+=2150", // Shorter scroll distance on mobile
+        end: isMobile ? "bottom center" : "+=2150", // Mobile uses element bottom
         pin: !isMobile, // Only pin on desktop
-        scrub: 1,
+        scrub: isMobile ? 0.5 : 1, // Faster scrub on mobile
         onEnter: () => {
           navLogo.style.transition = "none";
         },
@@ -841,22 +844,27 @@ window.mekApp = (function () {
       if (now - lastRefreshTime >= 100) {
         ScrollTrigger.refresh();
         lastRefreshTime = now;
+        // Update isMobile value on resize
+        const newIsMobile = window.innerWidth <= 767;
+        if (newIsMobile !== isMobile) {
+          location.reload(); // Refresh page if mobile state changes
+        }
       }
     });
 
     resizeObserver.observe(document.body);
 
     if (isMobile) {
-      // Mobile animation timeline
+      // Mobile animation timeline - adjusted durations and values
       tl.fromTo(
         navLogo,
         { width: "100%", marginTop: "0rem" },
-        { width: "6rem", marginTop: "0.75rem", duration: 0.2 },
+        { width: "6rem", marginTop: "1.0625rem", duration: 0.3 },
         0
       ).fromTo(
         introText,
         { opacity: 1, transform: "translateY(0rem)" },
-        { opacity: 0, transform: "translateY(-3rem)", duration: 0.2 },
+        { opacity: 0, transform: "translateY(-3rem)", duration: 0.3 },
         0
       );
     } else {
@@ -936,7 +944,7 @@ window.mekApp = (function () {
       scrollTrigger: {
         trigger: ssElement,
         start: "top top",
-        end: isMobile ? "+=3000px" : "+=5000px",
+        end: isMobile ? "+=5000px" : "+=5000px",
         pin: true,
         pinSpacing: false,
         scrub: isMobile ? 0.3 : 0.5,
