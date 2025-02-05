@@ -8,7 +8,21 @@ window.mekApp = (function () {
   // Variables to track scroll position for detecting scroll direction
   let lastScrollY = window.scrollY;
 
+  // let lockedScrollY;
+  //   const blockScroll = () => window.scrollTo(0, lockedScrollY);
+
+  //   function disableScroll() {
+  //     lockedScrollY = window.scrollY;
+  //     gsap.ticker.add(blockScroll);
+  //   }
+
+  //   function enableScroll() {
+  //     gsap.ticker.remove(blockScroll);
+  //   }
+
   function init() {
+    setupBreakpointHandler();
+
     // Setup before load
     convertEmptyHrefs();
     setupNavListeners();
@@ -32,6 +46,18 @@ window.mekApp = (function () {
     setupDropdownGroups();
     setupStatementsNav();
     initLegacyHover();
+  }
+
+  function setupBreakpointHandler() {
+    let lastBreakpoint = window.innerWidth <= 767 ? 'mobile' : 'desktop';
+    
+    window.addEventListener('resize', () => {
+      const currentBreakpoint = window.innerWidth <= 767 ? 'mobile' : 'desktop';
+      if (currentBreakpoint !== lastBreakpoint) {
+        location.reload();
+        lastBreakpoint = currentBreakpoint;
+      }
+    });
   }
 
   function setupStatementsNav() {
@@ -181,113 +207,130 @@ window.mekApp = (function () {
   function setupLogoSwitcher() {
     const allLogos = gsap.utils.toArray(".clients_logo-wrapper");
     if (!allLogos.length) return;
-
     const container = document.querySelector(".clients_logos-grid");
     if (!container) return;
-
-    container.innerHTML = "";
-
-    let columns = 6,
-      rows = 1;
-    if (window.innerWidth < 992 && window.innerWidth >= 768) columns = 4;
-    if (window.innerWidth < 768 && window.innerWidth >= 480) columns = 3;
-    // if (window.innerWidth < 480) {
-    //   columns = 2;
-    //   rows = 2;
-    // }
-
-    const totalBoxes = columns * rows;
-    const boxes = [];
-
-    // Create box placeholders
-    for (let i = 0; i < totalBoxes; i++) {
-      const box = document.createElement("div");
-      box.classList.add("clients_logos-wrapper");
-      container.appendChild(box);
-      boxes.push(box);
-    }
-
-    // Distribute .clients_logo-wrapper elements among boxes
-    allLogos.forEach((logo, i) => {
-      const boxIndex = i % totalBoxes;
-      boxes[boxIndex].appendChild(logo);
-    });
-
-    // Create master timeline for logo animations
-    const masterTimeline = gsap.timeline({
-      repeat: -1,
-      repeatDelay: 4,
-    });
-
-    // Filter boxes that have more than 1 child
-    const activeBoxes = boxes.filter((box) => box.children.length > 1);
-
-    // Create array of indices and shuffle them while avoiding consecutive elements
-    const shuffleIndices = (length) => {
-      const indices = Array.from({ length }, (_, i) => i);
-      for (let i = length - 1; i > 0; i--) {
-        let j;
-        do {
-          j = Math.floor(Math.random() * (i + 1));
-          // Ensure j is not adjacent to i in the original order
-        } while (Math.abs(i - j) === 1);
-        [indices[i], indices[j]] = [indices[j], indices[i]];
-      }
-      return indices;
-    };
-
-    const shuffledIndices = shuffleIndices(activeBoxes.length);
-
-    shuffledIndices.forEach((originalIndex, i) => {
-      const box = activeBoxes[originalIndex];
-      const numLogos = box.children.length;
-      const boxTimeline = gsap.timeline();
-
-      // Set initial states: show the first logo, hide others
-      Array.from(box.children).forEach((logo, index) => {
-        gsap.set(logo, { y: 0, opacity: index === 0 ? 1 : 0 });
+  
+    let masterTimeline; // store timeline instance
+  
+    function setupLogos() {
+      // Kill any previous timeline
+      if (masterTimeline) masterTimeline.kill();
+  
+      // Clear container and reset inline styles on logos
+      container.innerHTML = "";
+      allLogos.forEach((logo) => {
+        logo.style.position = "";
+        logo.style.width = "";
+        gsap.set(logo, { clearProps: "all" });
       });
-
-      for (let j = 0; j < numLogos; j++) {
-        const currentLogo = box.children[j];
-        const nextLogo = box.children[(j + 1) % numLogos];
-        const dir = Math.random() < 0.5 ? "50%" : "-50%";
-
-        // Animate currentLogo out
-        boxTimeline.to(
-          currentLogo,
-          {
-            y: dir,
-            opacity: 0,
-            duration: 0.5,
-            ease: "power4.out",
-          },
-          j * 4
-        );
-
-        // Animate nextLogo in, ensuring immediateRender is false to prevent overlap
-        boxTimeline.fromTo(
-          nextLogo,
-          {
-            y: dir === "50%" ? "-50%" : "50%", // Match opposite direction of currentLogo
-            opacity: 0,
-            position: "absolute", // Add position absolute to ensure translation works
-            width: "100%", // Maintain width when absolute positioned
-          },
-          {
-            y: "0%",
-            opacity: 1,
-            duration: 0.5,
-            ease: "power4.out",
-            immediateRender: false,
-          },
-          j * 4
-        );
+  
+      // Set columns based on viewport
+      let columns = 6, rows = 1;
+      if (window.innerWidth < 992 && window.innerWidth >= 768) columns = 4;
+      if (window.innerWidth < 768 && window.innerWidth >= 480) columns = 3;
+      const totalBoxes = columns * rows;
+      const boxes = [];
+  
+      // Create placeholder boxes and make them relative for absolute children
+      for (let i = 0; i < totalBoxes; i++) {
+        const box = document.createElement("div");
+        box.classList.add("clients_logo-wrapper");
+        box.style.position = "relative";
+        container.appendChild(box);
+        boxes.push(box);
       }
-
-      masterTimeline.add(boxTimeline, i * 0.05);
+  
+      // Distribute logos into boxes
+      allLogos.forEach((logo, i) => {
+        const boxIndex = i % totalBoxes;
+        boxes[boxIndex].appendChild(logo);
+      });
+  
+      // Build master timeline
+      masterTimeline = gsap.timeline({
+        repeat: -1,
+        repeatDelay: 4,
+      });
+  
+      // Only animate boxes with multiple logos
+      const activeBoxes = boxes.filter((box) => box.children.length > 1);
+  
+      // Shuffle indices (avoiding adjacent swaps)
+      const shuffleIndices = (length) => {
+        const indices = Array.from({ length }, (_, i) => i);
+        for (let i = length - 1; i > 0; i--) {
+          let j;
+          do {
+            j = Math.floor(Math.random() * (i + 1));
+          } while (Math.abs(i - j) === 1);
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        return indices;
+      };
+  
+      const shuffledIndices = shuffleIndices(activeBoxes.length);
+  
+      shuffledIndices.forEach((originalIndex, i) => {
+        const box = activeBoxes[originalIndex];
+        const numLogos = box.children.length;
+        const boxTimeline = gsap.timeline();
+  
+        // Reset initial state: first logo visible, others hidden and positioned
+        Array.from(box.children).forEach((logo, index) => {
+          gsap.set(logo, {
+            y: 0,
+            opacity: index === 0 ? 1 : 0,
+            position: index === 0 ? "relative" : "absolute",
+            width: "100%",
+          });
+        });
+  
+        for (let j = 0; j < numLogos; j++) {
+          const currentLogo = box.children[j];
+          const nextLogo = box.children[(j + 1) % numLogos];
+          const dir = Math.random() < 0.5 ? "50%" : "-50%";
+  
+          boxTimeline.to(
+            currentLogo,
+            {
+              y: dir,
+              opacity: 0,
+              duration: 0.5,
+              ease: "power4.out",
+            },
+            j * 4
+          );
+  
+          boxTimeline.fromTo(
+            nextLogo,
+            {
+              y: dir === "50%" ? "-50%" : "50%",
+              opacity: 0,
+            },
+            {
+              y: "0%",
+              opacity: 1,
+              duration: 0.5,
+              ease: "power4.out",
+              immediateRender: false,
+            },
+            j * 4
+          );
+        }
+  
+        masterTimeline.add(boxTimeline, i * 0.05);
+      });
+    }
+  
+    setupLogos();
+  
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(setupLogos, 250);
     });
   }
+  
 
   function convertEmptyHrefs() {
     // Find all anchor tags with empty or # hrefs
@@ -484,17 +527,21 @@ window.mekApp = (function () {
   }
 
   function setupVideoElements() {
+    console.log("Setting up video elements...");
     const triggers = document.querySelectorAll("[data-vimeo-trigger]");
 
     // Function to initialize triggers after Vimeo Player API is loaded
     const initTriggers = () => {
+      console.log("Initializing video triggers...");
       triggers.forEach((trigger) => {
         let videoId = trigger.getAttribute("data-vimeo-trigger");
 
         // Build video URL with ID and autoplay
         let videoUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1`;
 
-        trigger.addEventListener("click", () => {
+        trigger.addEventListener("click", (e) => {
+          e.preventDefault();
+          console.log(`Triggering video modal for video ID: ${videoId}`);
           // Create modal element with the required structure
           const modal = document.createElement("div");
           modal.classList.add("video-modal");
@@ -576,6 +623,8 @@ window.mekApp = (function () {
           // Fade in modal
           gsap.fromTo(modal, { opacity: 0 }, { opacity: 1, duration: 0.5 });
 
+          // disableScroll();
+
           // Initialize Vimeo player
           const player = new Vimeo.Player(iframe);
 
@@ -590,6 +639,7 @@ window.mekApp = (function () {
               onComplete: () => {
                 player.unload().then(() => {
                   modal.parentNode.removeChild(modal);
+                  // enableScroll();
                 });
               },
             });
@@ -618,6 +668,7 @@ window.mekApp = (function () {
 
     if (typeof Vimeo === "undefined") {
       // Load Vimeo Player API script
+      console.log("Loading Vimeo Player API script...");
       const script = document.createElement("script");
       script.src = "https://player.vimeo.com/api/player.js";
       script.async = true;
@@ -797,7 +848,7 @@ window.mekApp = (function () {
   function setupHomeScrollAnimation() {
     // Enable normalized scrolling with nested scroll support
     ScrollTrigger.normalizeScroll({ allowNestedScroll: true });
-
+  
     const scrollAnimElement = document.querySelector("#home-scroll-anim");
     if (!scrollAnimElement) return;
     const reel = document.querySelector("#home-scroll-anim-reel");
@@ -806,14 +857,14 @@ window.mekApp = (function () {
     if (!navLogo) return;
     const scrollEncourager = document.querySelector("#scroll-encourager");
     if (!scrollEncourager) return;
-
+  
     const introText = document.querySelector(".intro-text");
     if (!introText) return;
     navLogo.style.transition = "none";
-
+  
     // Check window width and create appropriate timeline
     const isMobile = window.innerWidth <= 767;
-
+  
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: scrollAnimElement,
@@ -836,7 +887,7 @@ window.mekApp = (function () {
         invalidateOnRefresh: true,
       },
     });
-
+  
     // Add resize observer with rate limiting
     let lastRefreshTime = 0;
     const resizeObserver = new ResizeObserver(() => {
@@ -844,15 +895,11 @@ window.mekApp = (function () {
       if (now - lastRefreshTime >= 100) {
         ScrollTrigger.refresh();
         lastRefreshTime = now;
-        // Update isMobile value on resize
-        const newIsMobile = window.innerWidth <= 767;
-        if (newIsMobile !== isMobile) {
-          location.reload(); // Refresh page if mobile state changes
-        }
       }
     });
-
+  
     resizeObserver.observe(document.body);
+  
 
     if (isMobile) {
       // Mobile animation timeline - adjusted durations and values
@@ -1114,8 +1161,7 @@ window.mekApp = (function () {
         scrollTrigger: {
           trigger: element,
           start: "top 95%",
-          end: "top 5%",
-          toggleActions: "play none none reverse",
+          toggleActions: "play none none none",
         },
       });
 
@@ -1128,6 +1174,7 @@ window.mekApp = (function () {
           stagger: 0.01,
           delay,
           ease: "power2.in",
+          immediateRender: false
         }
       );
 
@@ -1271,72 +1318,92 @@ window.mekApp = (function () {
     const bgTriggers = gsap.utils.toArray("[data-bg-trigger]");
     const bgElements = document.querySelectorAll("[data-bg-element]");
     const root = document.documentElement;
-
-    // Get the initial --bg-scroller value or default to white
+    
     const defaultColor =
-      getComputedStyle(root).getPropertyValue("--bg-scroller").trim() ||
+      getComputedStyle(document.body).backgroundColor.trim() ||
       "#ffffff";
-
-    // Set all trigger and bg-element backgrounds to the current var(--bg-scroller)
-    bgTriggers.forEach((trigger) => {
+    
+    // Initialize backgrounds
+    bgTriggers.forEach(trigger => {
       trigger.style.background = "var(--bg-scroller)";
     });
-    bgElements.forEach((element) => {
+    bgElements.forEach(element => {
       element.style.background = "var(--bg-scroller)";
     });
-
-    // Create a scroll-based transition for each trigger
-    bgTriggers.forEach((trigger) => {
+    
+    bgTriggers.forEach((trigger, index) => {
       const colorValue =
         trigger.getAttribute("data-bg-trigger")?.trim() || defaultColor;
-
-      console.log(`Processing trigger with color: ${colorValue}`);
-      // Check for nearby trigger elements within 4rem threshold
-      // Find previous and next siblings that are triggers
-      const prevTrigger = trigger.previousElementSibling?.matches(
-        "[data-bg-trigger]"
-      )
+  
+      // Check for adjacent trigger elements
+      const prevTrigger = trigger.previousElementSibling?.matches("[data-bg-trigger]")
         ? trigger.previousElementSibling
         : null;
-      console.log(`Previous trigger found: ${prevTrigger ? "Yes" : "No"}`);
-
-      const nextTrigger = trigger.nextElementSibling?.matches(
-        "[data-bg-trigger]"
-      )
+      const nextTrigger = trigger.nextElementSibling?.matches("[data-bg-trigger]")
         ? trigger.nextElementSibling
         : null;
-      console.log(`Next trigger found: ${nextTrigger ? "Yes" : "No"}`);
-
+  
       const initialColor = prevTrigger
         ? prevTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
         : defaultColor;
       const endingColor = nextTrigger
         ? nextTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
         : defaultColor;
+  
+      const timeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: trigger,
+          start: "top bottom-=25%",
+          end: "bottom top+=40%",
+          scrub: true,
+          onEnter: () => {},
+          onLeave: () => {},
+          onEnterBack: () => {},
+          onLeaveBack: () => {}
+        },
+      });
 
-      // Each timeline fades from default → colorValue (first half)
-      // then colorValue → default (second half).
-      gsap
-        .timeline({
-          scrollTrigger: {
-            trigger: trigger,
-            start: "top bottom-=25%",
-            end: "bottom top+=40%",
-            scrub: true,
-          },
-        })
-        .fromTo(
+      // Only do the fromTo animation if there is no previous trigger
+      if (!prevTrigger) {
+        timeline.fromTo(
           root,
           { "--bg-scroller": initialColor },
           { "--bg-scroller": colorValue, ease: "none", duration: 0.1 }
-        )
-        .to(root, {
-          "--bg-scroller": endingColor,
-          ease: "none",
-          duration: 0.1,
-          delay: 0.8,
-        });
+        );
+      }
+
+      timeline.to(root, {
+        "--bg-scroller": endingColor,
+        ease: "none",
+        duration: 0.1,
+        delay: 0.8
+      });
     });
+
+    // Set initial background color based on visible triggers
+    const viewportHeight = window.innerHeight;
+    const threshold75 = viewportHeight * 0.75;
+    const threshold40 = viewportHeight * 0.4;
+    
+    let initialTrigger = null;
+    
+    // Check if any trigger is within threshold on page load
+    for (const trigger of bgTriggers) {
+      const rect = trigger.getBoundingClientRect();
+      
+      if ((rect.top <= threshold75 && rect.top >= 0) || 
+          (rect.bottom >= threshold40 && rect.bottom <= viewportHeight)) {
+        initialTrigger = trigger;
+        break;
+      }
+    }
+    
+    // Set the initial background color
+    const initialColor = initialTrigger 
+      ? initialTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
+      : defaultColor;
+    
+    root.style.setProperty("--bg-scroller", initialColor);
   }
 
   function setupNavListeners() {
@@ -1439,10 +1506,17 @@ window.mekApp = (function () {
     const navMenu = document.querySelector(navMenuId);
     const nav = document.querySelector(navId);
     const navContent = navMenu.querySelector(navContentSelector);
+    // const homeNavLogo = document.querySelector('.nav[data-wf--menu--style="home"] .nav_logo');
     if (nav && navMenu && navContent) {
       // Add the 'is-opening' class
       navMenu.classList.add("is-opening");
-
+      // if (homeNavLogo) {
+      //   gsap.to(homeNavLogo, {
+      //     width: "8.8rem",
+      //     marginTop: "1.0625rem", 
+      //     duration: 0.5
+      //   });
+      // }
       // Add the 'is-open' class to display the nav
       nav.classList.add("is-open");
       navMenu.classList.add("is-open");
@@ -1514,9 +1588,17 @@ window.mekApp = (function () {
 
   function setupScrollBehavior() {
     dataNavHideElements = Array.from(
-      document.querySelectorAll("[data-nav-hide]")
+      document.querySelectorAll("[data-nav-hide], [data-nav-show]")
     );
-    window.addEventListener("scroll", handleScroll);
+    let lastScrollTime = 0;
+    window.addEventListener("scroll", function() {
+      const currentTime = Date.now();
+      if (currentTime - lastScrollTime > 50) {
+        handleScroll();
+        lastScrollTime = currentTime;
+      }
+    });
+
     handleScroll();
   }
 
@@ -1530,24 +1612,31 @@ window.mekApp = (function () {
       document.body.classList.remove("page-scrolled");
     }
 
-    // Handle nav-hide class based on data-nav-hide elements
+    // Handle nav visibility
     if (!dataNavHideElements.length) {
+      // Default behavior - hide nav on scroll
       if (currentScrollY > 1) {
         document.body.classList.add("nav-hide");
       } else {
         document.body.classList.remove("nav-hide");
       }
     } else {
-      let lastState = null;
+      // Find the most recently passed trigger element
+      let lastPassedElement = null;
       dataNavHideElements.forEach((el) => {
         if (el.offsetTop <= currentScrollY) {
-          lastState = el.getAttribute("data-nav-hide");
+          lastPassedElement = el;
         }
       });
 
-      if (lastState === "true") {
-        document.body.classList.add("nav-hide");
+      if (lastPassedElement) {
+        if (lastPassedElement.hasAttribute("data-nav-hide")) {
+          document.body.classList.add("nav-hide");
+        } else if (lastPassedElement.hasAttribute("data-nav-show")) {
+          document.body.classList.remove("nav-hide");
+        }
       } else {
+        // No elements passed yet, show nav
         document.body.classList.remove("nav-hide");
       }
     }
