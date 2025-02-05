@@ -7,7 +7,6 @@ window.mekApp = (function () {
 
   // Variables to track scroll position for detecting scroll direction
   let lastScrollY = window.scrollY;
-  let ticking = false; // To optimize scroll event handling
 
   function init() {
     // Setup before load
@@ -16,6 +15,8 @@ window.mekApp = (function () {
     setupScrollBehavior();
     initializeScrollEffects();
     setupHomeScrollAnimation();
+    setupSSAnimation();
+    setupBgScroll();
     setupSwipers();
 
     // Phase 2 - loading animation
@@ -26,7 +27,6 @@ window.mekApp = (function () {
     setupScrollEncourager();
     setupAltCursors();
     setupSliderNavCursors();
-    setupSSAnimation();
     setupCustomSelects();
     setupLogoSwitcher();
     setupDropdownGroups();
@@ -181,10 +181,10 @@ window.mekApp = (function () {
   function setupLogoSwitcher() {
     const allLogos = gsap.utils.toArray(".clients_logo-wrapper");
     if (!allLogos.length) return;
-    
+
     const container = document.querySelector(".clients_logos-grid");
     if (!container) return;
-    
+
     container.innerHTML = "";
 
     let columns = 6,
@@ -224,7 +224,7 @@ window.mekApp = (function () {
 
     // Create array of indices and shuffle them while avoiding consecutive elements
     const shuffleIndices = (length) => {
-      const indices = Array.from({length}, (_, i) => i);
+      const indices = Array.from({ length }, (_, i) => i);
       for (let i = length - 1; i > 0; i--) {
         let j;
         do {
@@ -272,14 +272,14 @@ window.mekApp = (function () {
             y: dir === "50%" ? "-50%" : "50%", // Match opposite direction of currentLogo
             opacity: 0,
             position: "absolute", // Add position absolute to ensure translation works
-            width: "100%"  // Maintain width when absolute positioned
+            width: "100%", // Maintain width when absolute positioned
           },
           {
             y: "0%",
             opacity: 1,
             duration: 0.5,
             ease: "power4.out",
-            immediateRender: false
+            immediateRender: false,
           },
           j * 4
         );
@@ -347,7 +347,7 @@ window.mekApp = (function () {
       const swiperOptions = {
         speed: 500,
         autoHeight: false,
-        slidesPerView: 'auto',
+        slidesPerView: "auto",
         centeredSlides: true,
         autoplay: false,
         loop: true,
@@ -742,8 +742,8 @@ window.mekApp = (function () {
         if (!button.classList.contains("active")) return;
 
         const rect = parent.getBoundingClientRect();
-        const x = e.clientX - rect.left - (button.offsetWidth / 2); // Center horizontally
-        const y = e.clientY - rect.top - (button.offsetHeight / 2); // Center vertically
+        const x = e.clientX - rect.left - button.offsetWidth / 2; // Center horizontally
+        const y = e.clientY - rect.top - button.offsetHeight / 2; // Center vertically
 
         // Use transform for smoother animation
         gsap.to(button, {
@@ -768,8 +768,8 @@ window.mekApp = (function () {
 
       parent.addEventListener("mouseenter", (e) => {
         const rect = parent.getBoundingClientRect();
-        const x = e.clientX - rect.left - (button.offsetWidth / 2); // Center horizontally
-        const y = e.clientY - rect.top - (button.offsetHeight / 2); // Center vertically
+        const x = e.clientX - rect.left - button.offsetWidth / 2; // Center horizontally
+        const y = e.clientY - rect.top - button.offsetHeight / 2; // Center vertically
 
         gsap.to(button, {
           x: x,
@@ -864,7 +864,7 @@ window.mekApp = (function () {
       ).fromTo(
         introText,
         { opacity: 1, transform: "translateY(0rem)" },
-        { opacity: 0, transform: "translateY(-3rem)", duration: 0.3 },
+        { opacity: 0, transform: "translateY(-3rem)", duration: 0.05 },
         0
       );
     } else {
@@ -1195,188 +1195,148 @@ window.mekApp = (function () {
   function initializeScrollEffects() {
     if (window.innerWidth > 768) {
       // Initialize ScrollSmoother only on desktop
-    
+
       const smoother = ScrollSmoother.create({
         smooth: 1.25,
         effects: true,
         normalizeScroll: true,
       });
-    
-     
-    // Smooth load animations
-    gsap.utils
-      .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
-      .forEach((element) => {
-        const yOffset = element.dataset.smoothLoad || "4.5rem";
-        gsap.fromTo(
-          element,
-          { y: yOffset, opacity: 1 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.45,
-            ease: "power2.out",
-            immediateRender: false, // <-- important
-            scrollTrigger: {
-              trigger: element,
-              start: "top bottom",
-              toggleActions: "play none none reverse",
-            },
-          }
-        );
-      });
-    // 2) Group stagger elements by their original row (approx. same 'top') and stagger left-to-right
-    const staggerEls = gsap.utils.toArray(
-      "[data-smooth-load][data-smooth-load-stagger]"
-    );
-    const groups = {};
-    staggerEls.forEach((el) => {
-      const top = Math.round(el.getBoundingClientRect().top);
-      groups[top] = groups[top] || [];
-      groups[top].push(el);
-    });
-    Object.values(groups).forEach((group) => {
-      // Sort left-to-right
-      group.sort(
-        (a, b) =>
-          a.getBoundingClientRect().left - b.getBoundingClientRect().left
-      );
-      const yOffset = group[0].dataset.smoothLoad || "4.5rem";
-      // Create a timeline per row
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: group[0],
-          start: "top bottom",
-          toggleActions: "play none none reverse",
-        },
-      });
-      group.forEach((el, index) => {
-        tl.fromTo(
-          el,
-          { y: yOffset, opacity: 1 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.45 + index * 0.25, // Each element animates 100ms longer than the previous one
-            ease: "power2.out",
-            immediateRender: false, // <-- important
-          },
-          0
-        );
-      });
-    });
 
+      // Smooth load animations
+      gsap.utils
+        .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
+        .forEach((element) => {
+          const yOffset = element.dataset.smoothLoad || "4.5rem";
+          gsap.fromTo(
+            element,
+            { y: yOffset, opacity: 1 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.45,
+              ease: "power2.out",
+              immediateRender: false, // <-- important
+              scrollTrigger: {
+                trigger: element,
+                start: "top bottom",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        });
+      // 2) Group stagger elements by their original row (approx. same 'top') and stagger left-to-right
+      const staggerEls = gsap.utils.toArray(
+        "[data-smooth-load][data-smooth-load-stagger]"
+      );
+      const groups = {};
+      staggerEls.forEach((el) => {
+        const top = Math.round(el.getBoundingClientRect().top);
+        groups[top] = groups[top] || [];
+        groups[top].push(el);
+      });
+      Object.values(groups).forEach((group) => {
+        // Sort left-to-right
+        group.sort(
+          (a, b) =>
+            a.getBoundingClientRect().left - b.getBoundingClientRect().left
+        );
+        const yOffset = group[0].dataset.smoothLoad || "4.5rem";
+        // Create a timeline per row
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: group[0],
+            start: "top bottom",
+            toggleActions: "play none none reverse",
+          },
+        });
+        group.forEach((el, index) => {
+          tl.fromTo(
+            el,
+            { y: yOffset, opacity: 1 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.45 + index * 0.25, // Each element animates 100ms longer than the previous one
+              ease: "power2.out",
+              immediateRender: false, // <-- important
+            },
+            0
+          );
+        });
+      });
+    }
   }
 
-    // Start of Selection
-    // Background color scroll effects
-    // Start of Selection
-    gsap.utils.toArray("[data-bg-scroll]").forEach((element) => {
-      const cssValue = element.getAttribute("data-bg-scroll"); // e.g., "var(--variable-name)" or "#ff0000"
+  function setupBgScroll() {
+    const bgTriggers = gsap.utils.toArray("[data-bg-trigger]");
+    const bgElements = document.querySelectorAll("[data-bg-element]");
+    const root = document.documentElement;
 
-      let originalColor;
-      let defaultColor;
-      let isVariable = false;
-      let variableName;
+    // Get the initial --bg-scroller value or default to white
+    const defaultColor =
+      getComputedStyle(root).getPropertyValue("--bg-scroller").trim() ||
+      "#ffffff";
 
-      // Check if cssValue is a CSS variable
-      const variableNameMatch = cssValue.match(/var\((--[^)]+)\)/);
+    // Set all trigger and bg-element backgrounds to the current var(--bg-scroller)
+    bgTriggers.forEach((trigger) => {
+      trigger.style.background = "var(--bg-scroller)";
+    });
+    bgElements.forEach((element) => {
+      element.style.background = "var(--bg-scroller)";
+    });
 
-      if (variableNameMatch) {
-        isVariable = true;
-        variableName = variableNameMatch[1];
+    // Create a scroll-based transition for each trigger
+    bgTriggers.forEach((trigger) => {
+      const colorValue =
+        trigger.getAttribute("data-bg-trigger")?.trim() || defaultColor;
 
-        // Get the original value of the CSS variable
-        const computedStyle = getComputedStyle(document.documentElement);
-        originalColor =
-          computedStyle.getPropertyValue(variableName).trim() || "#000000";
+      console.log(`Processing trigger with color: ${colorValue}`);
+      // Check for nearby trigger elements within 4rem threshold
+      // Find previous and next siblings that are triggers
+      const prevTrigger = trigger.previousElementSibling?.matches(
+        "[data-bg-trigger]"
+      )
+        ? trigger.previousElementSibling
+        : null;
+      console.log(`Previous trigger found: ${prevTrigger ? "Yes" : "No"}`);
 
-        // Get default color from data-bg-preload or default to "#ffffff"
-        defaultColor = element.getAttribute("data-bg-preload") || "#ffffff";
+      const nextTrigger = trigger.nextElementSibling?.matches(
+        "[data-bg-trigger]"
+      )
+        ? trigger.nextElementSibling
+        : null;
+      console.log(`Next trigger found: ${nextTrigger ? "Yes" : "No"}`);
 
-        // Set the CSS variable to default color initially
-        document.documentElement.style.setProperty(variableName, defaultColor);
-      } else {
-        // Assume cssValue is a hex color code
-        isVariable = false;
-        originalColor = cssValue.trim() || "#000000";
+      const initialColor = prevTrigger
+        ? prevTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
+        : defaultColor;
+      const endingColor = nextTrigger
+        ? nextTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
+        : defaultColor;
 
-        // Get default color from data-bg-preload or default to "#ffffff"
-        defaultColor = element.getAttribute("data-bg-preload") || "#ffffff";
-
-        // Set the body background color to default color initially
-        document.body.style.backgroundColor = defaultColor;
-      }
-
-      // Flag to track if background-color is set on body
-      let isBodyBgSet = false;
-
-      // Function to animate the background color
-      const animateBackground = (toColor, onComplete) => {
-        if (isVariable) {
-          gsap.to(document.documentElement, {
-            duration: 0.4,
-            ease: "linear",
-            css: { [variableName]: toColor },
-            onComplete: onComplete,
-          });
-        } else {
-          gsap.to(document.body, {
-            duration: 0.4,
-            ease: "linear",
-            backgroundColor: toColor,
-            onComplete: onComplete,
-          });
-        }
-      };
-
-      ScrollTrigger.create({
-        trigger: element,
-        start: "top center",
-        end: "bottom 50%",
-        onEnter: () => {
-          isBodyBgSet = true;
-          // Add inline style to body
-          if (isVariable) {
-            document.body.style.backgroundColor = `var(${variableName})`;
-          } else {
-            document.body.style.backgroundColor = originalColor;
-          }
-          // Animate background color from defaultColor to originalColor
-          animateBackground(originalColor);
-        },
-        onLeave: () => {
-          // Animate background color back to defaultColor
-          animateBackground(defaultColor, () => {
-            // Remove inline style from body
-            if (isBodyBgSet) {
-              document.body.style.backgroundColor = "";
-              isBodyBgSet = false;
-            }
-          });
-        },
-        onEnterBack: () => {
-          isBodyBgSet = true;
-          // Add inline style to body
-          if (isVariable) {
-            document.body.style.backgroundColor = `var(${variableName})`;
-          } else {
-            document.body.style.backgroundColor = originalColor;
-          }
-          // Animate background color from defaultColor to originalColor
-          animateBackground(originalColor);
-        },
-        onLeaveBack: () => {
-          // Animate background color back to defaultColor
-          animateBackground(defaultColor, () => {
-            // Remove inline style from body
-            if (isBodyBgSet) {
-              document.body.style.backgroundColor = "";
-              isBodyBgSet = false;
-            }
-          });
-        },
-      });
+      // Each timeline fades from default → colorValue (first half)
+      // then colorValue → default (second half).
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: trigger,
+            start: "top bottom-=25%",
+            end: "bottom top+=40%",
+            scrub: true,
+            markers: true,
+          },
+        })
+        .fromTo(
+          root,
+          { "--bg-scroller": initialColor },
+          { "--bg-scroller": colorValue, ease: "none", duration: 0.1 }
+        )
+        .to(root, {
+          "--bg-scroller": endingColor,
+          ease: "none",
+          duration: 0.1,
+          delay: 0.8,
+        });
     });
   }
 
