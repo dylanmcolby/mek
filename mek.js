@@ -859,7 +859,7 @@ window.mekApp = (function () {
       tl.fromTo(
         navLogo,
         { width: "100%", marginTop: "0rem" },
-        { width: "8.5rem", marginTop: "1.0625rem", duration: 0.3 },
+        { width: "8.5rem", marginTop: "0rem", duration: 0.3 },
         0
       ).fromTo(
         introText,
