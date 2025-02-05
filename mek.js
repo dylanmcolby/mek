@@ -930,7 +930,7 @@ window.mekApp = (function () {
 
     if (window.innerWidth <= 767) {
       gsap.set(ssElement, {
-        y: "-40vh",
+        y: "-40svh",
       });
     } else {
       gsap.set(ssElement, {
@@ -1193,15 +1193,16 @@ window.mekApp = (function () {
   }
 
   function initializeScrollEffects() {
-    // Initialize ScrollSmoother only on desktop
     if (window.innerWidth > 768) {
+      // Initialize ScrollSmoother only on desktop
+    
       const smoother = ScrollSmoother.create({
         smooth: 1.25,
         effects: true,
         normalizeScroll: true,
       });
     
-
+     
     // Smooth load animations
     gsap.utils
       .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
