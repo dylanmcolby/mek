@@ -30,6 +30,7 @@ window.mekApp = (function () {
     initializeScrollEffects();
     setupHomeScrollAnimation();
     setupSSAnimation();
+    setupSSHero();
     setupBgScroll();
     setupSwipers();
 
@@ -209,13 +210,16 @@ window.mekApp = (function () {
     if (!allLogos.length) return;
     const container = document.querySelector(".clients_logos-grid");
     if (!container) return;
-  
+
     let masterTimeline; // store timeline instance
-  
+
     function setupLogos() {
-      // Kill any previous timeline
-      if (masterTimeline) masterTimeline.kill();
-  
+      // Kill any previous timeline and its ScrollTrigger
+      if (masterTimeline) {
+        masterTimeline.kill();
+        if (masterTimeline.scrollTrigger) masterTimeline.scrollTrigger.kill();
+      }
+
       // Clear container and reset inline styles on logos
       container.innerHTML = "";
       allLogos.forEach((logo) => {
@@ -223,14 +227,15 @@ window.mekApp = (function () {
         logo.style.width = "";
         gsap.set(logo, { clearProps: "all" });
       });
-  
+
       // Set columns based on viewport
-      let columns = 6, rows = 1;
+      let columns = 6,
+        rows = 1;
       if (window.innerWidth < 992 && window.innerWidth >= 768) columns = 4;
       if (window.innerWidth < 768 && window.innerWidth >= 480) columns = 3;
       const totalBoxes = columns * rows;
       const boxes = [];
-  
+
       // Create placeholder boxes and make them relative for absolute children
       for (let i = 0; i < totalBoxes; i++) {
         const box = document.createElement("div");
@@ -239,22 +244,32 @@ window.mekApp = (function () {
         container.appendChild(box);
         boxes.push(box);
       }
-  
+
       // Distribute logos into boxes
       allLogos.forEach((logo, i) => {
         const boxIndex = i % totalBoxes;
         boxes[boxIndex].appendChild(logo);
       });
-  
-      // Build master timeline
+
+      // Build master timeline, initialize as paused
       masterTimeline = gsap.timeline({
         repeat: -1,
         repeatDelay: 4,
+        paused: true,
+        scrollTrigger: {
+          trigger: container,
+          start: "top bottom",
+          end: "bottom top",
+          onEnter: () => masterTimeline.play(),
+          onLeave: () => masterTimeline.pause(),
+          onEnterBack: () => masterTimeline.play(),
+          onLeaveBack: () => masterTimeline.pause(),
+        },
       });
-  
+
       // Only animate boxes with multiple logos
       const activeBoxes = boxes.filter((box) => box.children.length > 1);
-  
+
       // Shuffle indices (avoiding adjacent swaps)
       const shuffleIndices = (length) => {
         const indices = Array.from({ length }, (_, i) => i);
@@ -267,14 +282,14 @@ window.mekApp = (function () {
         }
         return indices;
       };
-  
+
       const shuffledIndices = shuffleIndices(activeBoxes.length);
-  
+
       shuffledIndices.forEach((originalIndex, i) => {
         const box = activeBoxes[originalIndex];
         const numLogos = box.children.length;
         const boxTimeline = gsap.timeline();
-  
+
         // Reset initial state: first logo visible, others hidden and positioned
         Array.from(box.children).forEach((logo, index) => {
           gsap.set(logo, {
@@ -284,12 +299,12 @@ window.mekApp = (function () {
             width: "100%",
           });
         });
-  
+
         for (let j = 0; j < numLogos; j++) {
           const currentLogo = box.children[j];
           const nextLogo = box.children[(j + 1) % numLogos];
           const dir = Math.random() < 0.5 ? "50%" : "-50%";
-  
+
           boxTimeline.to(
             currentLogo,
             {
@@ -300,7 +315,7 @@ window.mekApp = (function () {
             },
             j * 4
           );
-  
+
           boxTimeline.fromTo(
             nextLogo,
             {
@@ -317,13 +332,13 @@ window.mekApp = (function () {
             j * 4
           );
         }
-  
+
         masterTimeline.add(boxTimeline, i * 0.05);
       });
     }
-  
+
     setupLogos();
-  
+
     let resizeTimeout;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimeout);
@@ -425,106 +440,179 @@ window.mekApp = (function () {
   }
 
   function initLegacyHover() {
-    document.querySelectorAll(".legacy_list-item").forEach((item) => {
+    if (window.innerWidth < 768) return;
+  
+    const listItems = document.querySelectorAll('.legacy_list-item');
+  
+    listItems.forEach((item) => {
+      const hoverElement = item.querySelector('.legacy_hover');
+      if (!hoverElement) return;
+  
+      hoverElement.style.position = 'absolute';
+      hoverElement.style.pointerEvents = 'none';
+      hoverElement.style.transform = 'scale(0) translate(-50%, -50%)';
+      hoverElement.style.transformOrigin = 'center center';
+      hoverElement.style.willChange = 'transform, opacity';
+      hoverElement.style.opacity = '0';
+  
+      let isHovering = false;
+  
+      const onMouseMove = (e) => {
+        if (!isHovering) return;
+        const rect = item.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        gsap.to(hoverElement, {
+          x: x,
+          y: y - (hoverElement.offsetHeight / 2), // Offset by half the height to center vertically
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+  
       const vimeoEl = item.querySelector("[data-vimeo-bg-id]");
-      if (!vimeoEl) return;
-      const vimeoId = vimeoEl.getAttribute("data-vimeo-bg-id");
-      const legacyHover = item.querySelector(".legacy_hover");
-      if (!legacyHover) return;
-
-      // Create spinner and append to legacy_hover
-      const spinner = document.createElement("div");
-      spinner.classList.add("loading-spinner");
-      spinner.style.cssText = `
+      if (vimeoEl) {
+        const vimeoId = vimeoEl.getAttribute("data-vimeo-bg-id");
+  
+        const spinner = document.createElement("div");
+        spinner.classList.add("loading-spinner");
+        spinner.style.cssText = `
+          position: absolute;
+          bottom: 20px;
+          left: 20px;
+          width: 24px;
+          height: 24px;
+          border: 2px solid #fff;
+          border-top: 2px solid transparent;
+          border-radius: 50%;
+          opacity: 0;
+          transition: opacity 0.3s;
+          animation: spin 1s linear infinite;
+          pointer-events: none;
+        `;
+        hoverElement.appendChild(spinner);
+  
+        let iframe = null;
+        let player = null;
+        let loaded = false;
+        let isVideoHovered = false;
+  
+        function createIframe() {
+          iframe = document.createElement("iframe");
+          iframe.src = `https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&loop=1&muted=1`;
+          iframe.allow = "autoplay; fullscreen";
+          iframe.allowFullscreen = true;
+          iframe.title = "Background Video";
+          iframe.style.cssText = `
+            box-sizing: border-box;
+            width: 50vw;
+            height: 100%;
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 24px;
-            height: 24px;
-            border: 2px solid #fff;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
+            border: none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             opacity: 0;
             transition: opacity 0.3s;
-            animation: spin 1s linear infinite;
             pointer-events: none;
           `;
-      legacyHover.appendChild(spinner);
-
-      // State variables
-      let iframe = null;
-      let player = null;
-      let loaded = false;
-      let isHovered = false;
-
-      function createIframe() {
-        iframe = document.createElement("iframe");
-        iframe.src = `https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&loop=1&muted=1`;
-        iframe.allow = "autoplay; fullscreen";
-        iframe.allowFullscreen = true;
-        iframe.title = "Background Video";
-        iframe.style.cssText = `
-              box-sizing: border-box;
-              width: 50vw;
-              height: 100%;
-              position: absolute;
-              border: none;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              opacity: 0;
-              transition: opacity 0.3s;
-              pointer-events: none;
-            `;
-        vimeoEl.appendChild(iframe);
-
-        // Create the Vimeo player instance and wait for the video to load.
-        player = new Vimeo.Player(iframe);
-        player.on("loaded", () => {
-          loaded = true;
-          // Only fade in if still hovered
-          if (isHovered) {
-            iframe.style.opacity = "1";
-            spinner.style.opacity = "0";
+          vimeoEl.appendChild(iframe);
+  
+          player = new Vimeo.Player(iframe);
+          player.on("loaded", () => {
+            loaded = true;
+            if (isVideoHovered) {
+              iframe.style.opacity = "1";
+              spinner.style.opacity = "0";
+            }
+          });
+        }
+  
+        item.addEventListener('mouseenter', (e) => {
+          isHovering = true;
+          isVideoHovered = true;
+          const rect = item.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          gsap.to(hoverElement, {
+            x: x,
+            y: y - (hoverElement.offsetHeight / 2), // Offset by half the height to center vertically
+            scale: 1,
+            opacity: 1,
+            duration: 0.5,
+            ease: 'power2.out',
+          });
+  
+          if (!iframe) {
+            createIframe();
+            spinner.style.opacity = "1";
+          } else {
+            spinner.style.opacity = loaded ? "0" : "1";
+            if (loaded) iframe.style.opacity = "1";
+          }
+  
+          item.addEventListener('mousemove', onMouseMove);
+        });
+  
+        item.addEventListener('mouseleave', () => {
+          isHovering = false;
+          isVideoHovered = false;
+          item.removeEventListener('mousemove', onMouseMove);
+  
+          gsap.to(hoverElement, {
+            scale: 0,
+            opacity: 0,
+            duration: 0.5,
+            ease: 'power2.out',
+          });
+  
+          spinner.style.opacity = "0";
+          if (iframe) {
+            iframe.style.opacity = "0";
+            setTimeout(() => {
+              if (iframe && iframe.parentElement === vimeoEl) {
+                vimeoEl.removeChild(iframe);
+              }
+              if (player) {
+                player.unload().catch(() => {});
+              }
+              iframe = null;
+              player = null;
+              loaded = false;
+            }, 300);
           }
         });
+      } else {
+        item.addEventListener('mouseenter', (e) => {
+          isHovering = true;
+          const rect = item.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          gsap.to(hoverElement, {
+            x: x,
+            y: y - (hoverElement.offsetHeight / 2), // Offset by half the height to center vertically
+            scale: 1,
+            opacity: 1,
+            duration: 0.5,
+            ease: 'power2.out',
+          });
+          item.addEventListener('mousemove', onMouseMove);
+        });
+  
+        item.addEventListener('mouseleave', () => {
+          isHovering = false;
+          item.removeEventListener('mousemove', onMouseMove);
+          gsap.to(hoverElement, {
+            scale: 0,
+            opacity: 0,
+            duration: 0.5,
+            ease: 'power2.out',
+          });
+        });
       }
-
-      item.addEventListener("mouseenter", () => {
-        isHovered = true;
-        // If iframe doesn't exist, create it and show spinner
-        if (!iframe) {
-          createIframe();
-          spinner.style.opacity = "1";
-        } else {
-          // If iframe exists and is loaded, ensure it's visible.
-          spinner.style.opacity = loaded ? "0" : "1";
-          if (loaded) iframe.style.opacity = "1";
-        }
-      });
-
-      item.addEventListener("mouseleave", () => {
-        isHovered = false;
-        spinner.style.opacity = "0";
-        if (iframe) {
-          // Fade out the iframe
-          iframe.style.opacity = "0";
-          setTimeout(() => {
-            if (iframe && iframe.parentElement === vimeoEl) {
-              vimeoEl.removeChild(iframe);
-            }
-            if (player) {
-              player.unload().catch(() => {});
-            }
-            // Reset state
-            iframe = null;
-            player = null;
-            loaded = false;
-          }, 300); // match the transition duration
-        }
-      });
     });
   }
+  
 
   function setupVideoElements() {
     console.log("Setting up video elements...");
@@ -540,6 +628,11 @@ window.mekApp = (function () {
         let videoUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1`;
 
         trigger.addEventListener("click", (e) => {
+          // Check if clicked element is .video-bg-btn and ignore if so
+          if (e.target.closest('.video-bg-btn')) {
+            return;
+          }
+
           e.preventDefault();
           console.log(`Triggering video modal for video ID: ${videoId}`);
           // Create modal element with the required structure
@@ -664,6 +757,8 @@ window.mekApp = (function () {
           });
         });
       });
+
+      setupBgVideos();
     };
 
     if (typeof Vimeo === "undefined") {
@@ -709,17 +804,34 @@ window.mekApp = (function () {
         if (!cursor.classList.contains("active")) return;
         if (video && video.classList.contains("visible")) return;
 
+        // Check if hovering over video-bg-btn
+        if (e.target.closest('.video-bg-btn')) {
+          // Hide alt cursor and deactivate
+          gsap.to(cursor, {
+            scale: 0,
+            duration: 0.5,
+            ease: "power2.out",
+          });
+          cursor.classList.remove("active");
+          return;
+        }
+
         const rect = parent.getBoundingClientRect();
         const cursorRect = cursor.getBoundingClientRect();
         const halfWidth = cursorRect.width / 2;
+        const halfHeight = cursorRect.height / 2;
 
-        // Calculate constrained position
-        let x = e.clientX - rect.left;
-        const minX = halfWidth;
-        const maxX = rect.width - halfWidth;
+        // Calculate position relative to parent
+        let x = e.clientX - rect.left - halfWidth;
+        let y = e.clientY - rect.top - halfHeight;
+
+        // Constrain position to keep cursor fully visible
+        const minX = 0;
+        const maxX = rect.width - cursorRect.width;
+        const minY = 0;
+        const maxY = rect.height - cursorRect.height;
         x = Math.min(Math.max(x, minX), maxX);
-
-        const y = e.clientY - rect.top;
+        y = Math.min(Math.max(y, minY), maxY);
 
         // Use transform for smoother animation
         gsap.to(cursor, {
@@ -734,6 +846,35 @@ window.mekApp = (function () {
       // Debounce mousemove for better performance
       let frame;
       const smoothMove = (e) => {
+        if (e.target.closest('.video-bg-btn')) {
+          // Hide alt cursor and deactivate when over video-bg-btn
+          if (cursor.classList.contains("active")) {
+            gsap.to(cursor, {
+              scale: 0,
+              duration: 0.5,
+              ease: "power2.out",
+            });
+            cursor.classList.remove("active");
+          }
+          return;
+        } else {
+          // Reactivate alt cursor if not active
+          if (!cursor.classList.contains("active")) {
+            cursor.classList.add("active");
+            const rect = parent.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            gsap.to(cursor, {
+              x: x,
+              y: y,
+              scale: 1,
+              duration: 0.5,
+              ease: "power2.out",
+            });
+          }
+        }
+
         if (frame) {
           cancelAnimationFrame(frame);
         }
@@ -744,6 +885,18 @@ window.mekApp = (function () {
 
       parent.addEventListener("mouseenter", (e) => {
         if (video && video.classList.contains("visible")) return;
+
+        // Check if entering on video-bg-btn
+        if (e.target.closest('.video-bg-btn')) {
+          // Hide alt cursor and deactivate
+          gsap.to(cursor, {
+            scale: 0,
+            duration: 0.5,
+            ease: "power2.out",
+          });
+          cursor.classList.remove("active");
+          return;
+        }
 
         const rect = parent.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -1314,8 +1467,149 @@ window.mekApp = (function () {
     }
   }
 
+  function setupSSHero() {
+    const ssHeroContent = document.querySelector('.ss-hero_content');
+    if (!ssHeroContent) return;
+
+    // Function to animate characters
+    function animateSSHero() {
+      // Split text into spans per character, excluding elements inside .ss-hero_caption
+      const textElements = ssHeroContent.querySelectorAll('*:not(script):not(style):not(.ss-hero_caption):not(.ss-hero_caption *)');
+      textElements.forEach((el) => {
+        el.childNodes.forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const fragment = document.createDocumentFragment();
+            text.split('').forEach((char) => {
+              const span = document.createElement('span');
+              span.classList.add('char');
+              span.textContent = char; // Keep original character including spaces
+              span.style.whiteSpace = 'pre'; // Preserve whitespace
+              fragment.appendChild(span);
+            });
+            el.replaceChild(fragment, node);
+          }
+        });
+      });
+
+      // Create a beautiful text reveal animation
+      const chars = ssHeroContent.querySelectorAll('.char');
+      const caption = ssHeroContent.querySelector('.ss-hero_caption');
+      const tl = gsap.timeline();
+
+      // First wave - characters fade in from bottom with slight scale
+      tl.fromTo(chars, {
+        opacity: 0,
+        translateY: '100%',
+        scale: 1,
+        display: "inline-block",
+        rotateZ: 5,
+        rotateX: -30
+      }, {
+        opacity: 1,
+        translateY: 0,
+        scale: 1,
+        display: "inline-block",
+        rotateZ: 0,
+        rotateX: 0,
+        duration: 1.5,
+        ease: "power4.out",
+        stagger: {
+          each: 0.05
+        }
+      })
+      
+      // Fade in caption after main animation
+      if (caption) {
+        tl.fromTo(caption, {
+          opacity: 0,
+          y: 20
+        }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: "power2.out"
+        }, ">=0")
+      }
+
+      // Fade in and spin .ss-hero_icon
+      const ssHeroIcon = ssHeroContent.querySelector('.ss-hero_icon');
+      if (ssHeroIcon) {
+        gsap.to(ssHeroIcon, {
+          opacity: 1,
+          rotation: 360,
+          duration: 10,
+          ease: "none",
+          repeat: -1
+        });
+      }
+    }
+
+    // Check if element is already in viewport
+    function isElementInViewport(el) {
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.top < window.innerHeight && rect.bottom > 0
+      );
+    }
+
+    // Animate now if visible, or when it becomes visible
+    if (isElementInViewport(ssHeroContent)) {
+      animateSSHero();
+    } else {
+      // Use ScrollTrigger to trigger when element becomes visible
+      ScrollTrigger.create({
+        trigger: ssHeroContent,
+        start: 'top bottom',
+        onEnter: animateSSHero,
+        once: true
+      });
+    }
+  }
+
   function setupBgVideos() {
-    
+      const bgVideos = document.querySelectorAll('[data-vimeo-bg-id]');
+
+      bgVideos.forEach((bgVideo) => {
+        const iframe = bgVideo.querySelector('iframe');
+        const player = new Vimeo.Player(iframe);
+        const videoBgBtn = bgVideo.parentElement.querySelector('.video-bg-btn');
+
+        if (videoBgBtn) {
+          // Initial check
+          player.getPaused().then(function(paused) {
+            if (paused) {
+              videoBgBtn.classList.add('paused');
+            }
+          });
+
+          // Check 10 times at 1000ms intervals
+          for (let i = 1; i <= 10; i++) {
+            setTimeout(() => {
+              player.getPaused().then(function(paused) {
+                if (paused) {
+                  videoBgBtn.classList.add('paused');
+                } else {
+                  videoBgBtn.classList.remove('paused');
+                }
+              });
+            }, 1000 * i);
+          }
+
+          videoBgBtn.addEventListener('click', function(event) {
+            event.preventDefault();
+            player.getPaused().then(function(paused) {
+              if (paused) {
+                player.play();
+                videoBgBtn.classList.remove('paused');
+              } else {
+                player.pause();
+                videoBgBtn.classList.add('paused');
+              }
+            });
+          });
+        }
+      });
   }
 
   function setupBgScroll() {
