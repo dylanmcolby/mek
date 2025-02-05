@@ -1193,12 +1193,14 @@ window.mekApp = (function () {
   }
 
   function initializeScrollEffects() {
-    // Initialize ScrollSmoother
-    const smoother = ScrollSmoother.create({
-      smooth: 1.25,
-      effects: true,
-      normalizeScroll: true,
-    });
+    // Initialize ScrollSmoother only on desktop
+    if (window.innerWidth > 768) {
+      const smoother = ScrollSmoother.create({
+        smooth: 1.25,
+        effects: true,
+        normalizeScroll: true,
+      });
+    }
 
     // Smooth load animations
     gsap.utils
