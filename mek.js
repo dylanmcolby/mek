@@ -1323,7 +1323,6 @@ window.mekApp = (function () {
             start: "top bottom-=25%",
             end: "bottom top+=40%",
             scrub: true,
-            markers: true,
           },
         })
         .fromTo(
