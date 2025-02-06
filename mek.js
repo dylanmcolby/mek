@@ -1480,12 +1480,26 @@ window.mekApp = (function () {
           if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent;
             const fragment = document.createDocumentFragment();
-            text.split('').forEach((char) => {
-              const span = document.createElement('span');
-              span.classList.add('char');
-              span.textContent = char; // Keep original character including spaces
-              span.style.whiteSpace = 'pre'; // Preserve whitespace
-              fragment.appendChild(span);
+            // Split text into words
+            text.split(/\s+/).forEach((word) => {
+              if (word.length > 0) {
+                const wordSpan = document.createElement('span');
+                wordSpan.classList.add('word');
+                wordSpan.style.display = 'inline-block';
+                wordSpan.style.whiteSpace = 'nowrap';
+                
+                // Split word into characters
+                word.split('').forEach((char) => {
+                  const charSpan = document.createElement('span');
+                  charSpan.classList.add('char');
+                  charSpan.textContent = char;
+                  wordSpan.appendChild(charSpan);
+                });
+                
+                fragment.appendChild(wordSpan);
+                // Add space between words
+                fragment.appendChild(document.createTextNode(' '));
+              }
             });
             el.replaceChild(fragment, node);
           }
