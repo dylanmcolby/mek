@@ -1110,44 +1110,24 @@ window.mekApp = (function () {
   }
 
   function setupSSAnimation() {
-    console.log("DEBUG: Entered setupSSAnimation"); // DEBUG
     const ssElement = document.querySelector("#ss-intro");
-    if (!ssElement) {
-      console.log("DEBUG: #ss-intro not found, exiting setupSSAnimation"); // DEBUG
-      return;
-    }
-  
+    if (!ssElement) return;
+
     const circle = ssElement.querySelector(".ss-intro_circle");
-    if (!circle) {
-      console.log("DEBUG: .ss-intro_circle not found, exiting setupSSAnimation"); // DEBUG
-      return;
-    }
-  
+    if (!circle) return;
+
     const hugeText = ssElement.querySelector(".ss-intro_ss-huge-text");
-    if (!hugeText) {
-      console.log("DEBUG: .ss-intro_ss-huge-text not found, exiting setupSSAnimation"); // DEBUG
-      return;
-    }
-  
+    if (!hugeText) return;
+
     const heading = ssElement.querySelector(".ss-intro_heading");
-    if (!heading) {
-      console.log("DEBUG: .ss-intro_heading not found, exiting setupSSAnimation"); // DEBUG
-      return;
-    }
-  
+    if (!heading) return;
+
     const button = ssElement.querySelector(".ss-intro_button");
-    if (!button) {
-      console.log("DEBUG: .ss-intro_button not found, exiting setupSSAnimation"); // DEBUG
-      return;
-    }
-  
+    if (!button) return;
+
     const scrollEncourager = document.querySelector("#scroll-encourager");
-    if (!scrollEncourager) {
-      console.log("DEBUG: #scroll-encourager not found, exiting setupSSAnimation"); // DEBUG
-      return;
-    }
-  
-    console.log("DEBUG: Setting initial positions for #ss-intro based on screen size"); // DEBUG
+    if (!scrollEncourager) return;
+
     if (window.innerWidth <= 767) {
       gsap.set(ssElement, {
         y: "-40svh",
@@ -1157,37 +1137,34 @@ window.mekApp = (function () {
         y: "-25vh",
       });
     }
-  
+
     const isMobile = window.innerWidth <= 767;
-    console.log("DEBUG: isMobile?", isMobile); // DEBUG
-  
+
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: ssElement,
         start: "top top",
-        end: isMobile ? "+=5000px" : "+=5000px",
+        end: isMobile ? "+=8500" : "+=5000px",
         pin: true,
         pinSpacing: false,
         scrub: isMobile ? 0.3 : 0.5,
         invalidateOnRefresh: true,
       },
     });
-  
-    // We'll limit how often we call ScrollTrigger.refresh() using a timestamp check
+
     let lastRefreshTime = 0;
     const resizeObserver = new ResizeObserver(() => {
       const now = Date.now();
       if (now - lastRefreshTime >= 100) {
-        console.log("DEBUG: Refreshing ScrollTrigger due to ResizeObserver"); // DEBUG
         ScrollTrigger.refresh();
         lastRefreshTime = now;
       }
     });
+
     resizeObserver.observe(document.body);
-  
-    // Small delay before the initial animation so everything pins properly
+
     tl.set({}, { duration: 0.9 });
-  
+
     if (isMobile) {
       // Mobile animation timeline
       tl.to(
@@ -1219,13 +1196,12 @@ window.mekApp = (function () {
           },
           0.55
         )
-        // CHANGED: Increased duration and used "Power4.inOut" to slow down in the middle
         .to(
           hugeText,
           {
             transform: "translateX(calc(-100% - 115vw))",
-            duration: 2, 
-            ease: "power4.inOut", 
+            duration: 0.8,
+            ease: "slow",
           },
           0.25
         )
@@ -1278,13 +1254,12 @@ window.mekApp = (function () {
           },
           0.55
         )
-        // CHANGED: Increased duration and used "Power4.inOut" to slow down in the middle
         .to(
           hugeText,
           {
             transform: "translateX(calc(-100% - 115vw))",
-            duration: 2,
-            ease: "power4.inOut", 
+            duration: 0.8,
+            ease: "power4.out",
           },
           0.25
         )
@@ -1307,8 +1282,7 @@ window.mekApp = (function () {
           0.6
         );
     }
-  
-    // Fade in / out for scrollEncourager
+
     tl.to(
       scrollEncourager,
       {
@@ -1324,8 +1298,6 @@ window.mekApp = (function () {
       },
       0.375
     );
-  
-    console.log("DEBUG: Completed setupSSAnimation function"); // DEBUG
   }
   
   function setupTextAnimations() {
