@@ -1144,7 +1144,7 @@ window.mekApp = (function () {
       scrollTrigger: {
         trigger: ssElement,
         start: "top top",
-        end: isMobile ? "+=8500" : "+=5000px",
+        end: isMobile ? "+=5500" : "+=7000",
         pin: true,
         pinSpacing: false,
         scrub: isMobile ? 0.3 : 0.5,
@@ -1259,7 +1259,7 @@ window.mekApp = (function () {
           {
             transform: "translateX(calc(-100% - 115vw))",
             duration: 0.8,
-            ease: "power4.out",
+            ease: "slow",
           },
           0.25
         )
