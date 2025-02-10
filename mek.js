@@ -439,41 +439,122 @@ window.mekApp = (function () {
     });
   }
 
-  function initLegacyHover() {
-    if (window.innerWidth < 768) return;
-  
-    const listItems = document.querySelectorAll('.legacy_list-item');
-  
-    listItems.forEach((item) => {
-      const hoverElement = item.querySelector('.legacy_hover');
-      if (!hoverElement) return;
-  
-      hoverElement.style.position = 'absolute';
-      hoverElement.style.pointerEvents = 'none';
-      hoverElement.style.transform = 'scale(0) translate(-50%, -50%)';
-      hoverElement.style.transformOrigin = 'center center';
-      hoverElement.style.willChange = 'transform, opacity';
-      hoverElement.style.opacity = '0';
-  
-      let isHovering = false;
-  
-      const onMouseMove = (e) => {
-        if (!isHovering) return;
-        const rect = item.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        gsap.to(hoverElement, {
-          x: x,
-          y: y - (hoverElement.offsetHeight / 2), // Offset by half the height to center vertically
-          duration: 0.3,
-          ease: 'power2.out',
-        });
-      };
-  
-      const vimeoEl = item.querySelector("[data-vimeo-bg-id]");
-      if (vimeoEl) {
-        const vimeoId = vimeoEl.getAttribute("data-vimeo-bg-id");
-  
+/*******************************
+* Updated initLegacyHover Function
+*******************************/
+
+/**
+* This version adds a "fake cursor move" mechanism.
+* While the cursor remains inside the .legacy_list-item but not physically moving,
+* we periodically trigger the onMouseMove handler (every 25ms) with the last known
+* pointer coordinates. This keeps GSAP position updates fresh, preventing abrupt
+* element jumps when the cursor is still.
+*
+* Additional changes:
+* - Only show the loading spinner if there is a valid Vimeo video ID.
+* - Generous 'DEBUG' console logs for troubleshooting.
+*/
+
+function initLegacyHover() {
+  console.log('DEBUG: initLegacyHover called.');
+
+  // Exit early on mobile devices
+  if (window.innerWidth < 768) {
+    console.log('DEBUG: Window width < 768, exiting initLegacyHover.');
+    return;
+  }
+
+  const listItems = document.querySelectorAll('.legacy_list-item');
+  console.log('DEBUG: Found', listItems.length, 'legacy_list-item elements.');
+
+  listItems.forEach((item, index) => {
+    console.log('DEBUG: Processing legacy_list-item #', index);
+
+    const hoverElement = item.querySelector('.legacy_hover');
+    if (!hoverElement) {
+      console.log('DEBUG: No .legacy_hover found for item #', index);
+      return;
+    }
+
+    /************************************************
+     * Styling for the hover element
+     ************************************************/
+    hoverElement.style.position = 'absolute';
+    hoverElement.style.pointerEvents = 'none';
+    hoverElement.style.transform = 'scale(0) translate(-50%, -50%)';
+    hoverElement.style.transformOrigin = 'center center';
+    hoverElement.style.willChange = 'transform, opacity';
+    hoverElement.style.opacity = '0';
+
+    /************************************************
+     * State variables for the fake movement
+     ************************************************/
+    let isHovering = false;
+    let lastClientX = 0;
+    let lastClientY = 0;
+    let fakeMovementInterval = null;
+
+    /************************************************
+     * Reusable onMouseMove handler
+     ************************************************/
+    const onMouseMove = (e) => {
+      if (!isHovering) return;
+
+      // If this is a synthetic event, e might be an object we create ourselves.
+      // Default to lastClientX/Y if e.clientX is undefined.
+      const clientX = e.clientX !== undefined ? e.clientX : lastClientX;
+      const clientY = e.clientY !== undefined ? e.clientY : lastClientY;
+
+      // Update last known mouse position
+      lastClientX = clientX;
+      lastClientY = clientY;
+
+      const rect = item.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      console.log('DEBUG: onMouseMove -> x:', x, ', y:', y);
+      gsap.to(hoverElement, {
+        x: x,
+        y: y - hoverElement.offsetHeight / 2, // Offset by half the height
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    };
+
+    /**
+     * Starts the fake movement interval (calls onMouseMove every 25ms).
+     */
+    function startFakeMovement() {
+      console.log('DEBUG: startFakeMovement called.');
+      fakeMovementInterval = setInterval(() => {
+        // We call onMouseMove using the last known coordinates
+        onMouseMove({ clientX: lastClientX, clientY: lastClientY });
+      }, 25);
+    }
+
+    /**
+     * Clears the fake movement interval.
+     */
+    function stopFakeMovement() {
+      console.log('DEBUG: stopFakeMovement called.');
+      if (fakeMovementInterval) {
+        clearInterval(fakeMovementInterval);
+        fakeMovementInterval = null;
+      }
+    }
+
+    /************************************************
+     * Vimeo-specific logic (if data-vimeo-bg-id exists)
+     ************************************************/
+    const vimeoEl = item.querySelector("[data-vimeo-bg-id]");
+    if (vimeoEl) {
+      console.log('DEBUG: Vimeo element found in item #', index);
+      const vimeoId = vimeoEl.getAttribute("data-vimeo-bg-id") || "";
+
+      // Only proceed with Vimeo player + spinner if there's a valid vimeoId
+      if (vimeoId.trim()) {
+        // Create a loading spinner inside the hoverElement
         const spinner = document.createElement("div");
         spinner.classList.add("loading-spinner");
         spinner.style.cssText = `
@@ -491,13 +572,17 @@ window.mekApp = (function () {
           pointer-events: none;
         `;
         hoverElement.appendChild(spinner);
-  
+
         let iframe = null;
         let player = null;
         let loaded = false;
         let isVideoHovered = false;
-  
+
+        /**
+         * Creates and appends a Vimeo iframe to vimeoEl.
+         */
         function createIframe() {
+          console.log('DEBUG: createIframe called for Vimeo ID:', vimeoId);
           iframe = document.createElement("iframe");
           iframe.src = `https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&loop=1&muted=1`;
           iframe.allow = "autoplay; fullscreen";
@@ -517,9 +602,10 @@ window.mekApp = (function () {
             pointer-events: none;
           `;
           vimeoEl.appendChild(iframe);
-  
+
           player = new Vimeo.Player(iframe);
           player.on("loaded", () => {
+            console.log('DEBUG: Vimeo iframe loaded successfully.');
             loaded = true;
             if (isVideoHovered) {
               iframe.style.opacity = "1";
@@ -527,45 +613,58 @@ window.mekApp = (function () {
             }
           });
         }
-  
+
         item.addEventListener('mouseenter', (e) => {
+          console.log('DEBUG: Mouse entered item (Vimeo) #', index);
           isHovering = true;
           isVideoHovered = true;
+
+          // Store initial mouse coords
+          lastClientX = e.clientX;
+          lastClientY = e.clientY;
+
           const rect = item.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
+          const x = lastClientX - rect.left;
+          const y = lastClientY - rect.top;
+
+          // Animate hoverElement in
           gsap.to(hoverElement, {
             x: x,
-            y: y - (hoverElement.offsetHeight / 2), // Offset by half the height to center vertically
+            y: y - hoverElement.offsetHeight / 2,
             scale: 1,
             opacity: 1,
             duration: 0.5,
             ease: 'power2.out',
           });
-  
+
+          // If the iframe doesn't exist yet, create it
           if (!iframe) {
             createIframe();
             spinner.style.opacity = "1";
           } else {
+            // If it's loaded, hide spinner. Otherwise, show spinner until loaded
             spinner.style.opacity = loaded ? "0" : "1";
             if (loaded) iframe.style.opacity = "1";
           }
-  
+
           item.addEventListener('mousemove', onMouseMove);
+          startFakeMovement();
         });
-  
+
         item.addEventListener('mouseleave', () => {
+          console.log('DEBUG: Mouse left item (Vimeo) #', index);
           isHovering = false;
           isVideoHovered = false;
           item.removeEventListener('mousemove', onMouseMove);
-  
+          stopFakeMovement();
+
           gsap.to(hoverElement, {
             scale: 0,
             opacity: 0,
             duration: 0.5,
             ease: 'power2.out',
           });
-  
+
           spinner.style.opacity = "0";
           if (iframe) {
             iframe.style.opacity = "0";
@@ -583,35 +682,61 @@ window.mekApp = (function () {
           }
         });
       } else {
-        item.addEventListener('mouseenter', (e) => {
-          isHovering = true;
-          const rect = item.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-          gsap.to(hoverElement, {
-            x: x,
-            y: y - (hoverElement.offsetHeight / 2), // Offset by half the height to center vertically
-            scale: 1,
-            opacity: 1,
-            duration: 0.5,
-            ease: 'power2.out',
-          });
-          item.addEventListener('mousemove', onMouseMove);
-        });
-  
-        item.addEventListener('mouseleave', () => {
-          isHovering = false;
-          item.removeEventListener('mousemove', onMouseMove);
-          gsap.to(hoverElement, {
-            scale: 0,
-            opacity: 0,
-            duration: 0.5,
-            ease: 'power2.out',
-          });
-        });
+        // If vimeoId is empty, just fallback to standard hover logic (no spinner)
+        console.log('DEBUG: Vimeo element found but no valid Vimeo ID. Using standard hover.');
+        addStandardHoverLogic(item, hoverElement);
       }
-    });
-  }
+    } else {
+      console.log('DEBUG: Standard hover (no Vimeo) for item #', index);
+      addStandardHoverLogic(item, hoverElement);
+    }
+
+    /**
+     * Standard hover logic helper function
+     */
+    function addStandardHoverLogic(item, hoverElement) {
+      item.addEventListener('mouseenter', (e) => {
+        console.log('DEBUG: Mouse entered standard item #', index);
+        isHovering = true;
+
+        // Store initial mouse coords
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+
+        const rect = item.getBoundingClientRect();
+        const x = lastClientX - rect.left;
+        const y = lastClientY - rect.top;
+
+        gsap.to(hoverElement, {
+          x: x,
+          y: y - (hoverElement.offsetHeight / 2),
+          scale: 1,
+          opacity: 1,
+          duration: 0.5,
+          ease: 'power2.out',
+        });
+
+        item.addEventListener('mousemove', onMouseMove);
+        startFakeMovement();
+      });
+
+      item.addEventListener('mouseleave', () => {
+        console.log('DEBUG: Mouse left standard item #', index);
+        isHovering = false;
+        item.removeEventListener('mousemove', onMouseMove);
+        stopFakeMovement();
+
+        gsap.to(hoverElement, {
+          scale: 0,
+          opacity: 0,
+          duration: 0.5,
+          ease: 'power2.out',
+        });
+      });
+    }
+  });
+}
+  
   
 
   function setupVideoElements() {
@@ -1416,7 +1541,12 @@ window.mekApp = (function () {
               opacity: 1,
               duration: 0.45,
               ease: "power2.out",
-              immediateRender: false, // <-- important
+              immediateRender: false,
+              onComplete: () => {
+                // Remove inline styles after animation completes
+                element.style.transform = '';
+                element.style.opacity = '';
+              },
               scrollTrigger: {
                 trigger: element,
                 start: "top bottom",
@@ -1425,6 +1555,7 @@ window.mekApp = (function () {
             }
           );
         });
+
       // 2) Group stagger elements by their original row (approx. same 'top') and stagger left-to-right
       const staggerEls = gsap.utils.toArray(
         "[data-smooth-load][data-smooth-load-stagger]"
@@ -1446,7 +1577,7 @@ window.mekApp = (function () {
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: group[0],
-            start: "top bottom",
+            start: "top bottom", 
             toggleActions: "play none none reverse",
           },
         });
@@ -1457,9 +1588,14 @@ window.mekApp = (function () {
             {
               y: 0,
               opacity: 1,
-              duration: 0.45 + index * 0.25, // Each element animates 100ms longer than the previous one
+              duration: 0.45 + index * 0.25,
               ease: "power2.out",
-              immediateRender: false, // <-- important
+              immediateRender: false,
+              onComplete: () => {
+                // Remove inline styles after animation completes
+                el.style.transform = '';
+                el.style.opacity = '';
+              },
             },
             0
           );
@@ -1666,7 +1802,7 @@ window.mekApp = (function () {
       const timeline = gsap.timeline({
         scrollTrigger: {
           trigger: trigger,
-          start: "top bottom-=25%",
+          start: "top bottom-=40%",
           end: "bottom top+=40%",
           scrub: true,
           onEnter: () => {},
@@ -1681,14 +1817,14 @@ window.mekApp = (function () {
         timeline.fromTo(
           root,
           { "--bg-scroller": initialColor },
-          { "--bg-scroller": colorValue, ease: "none", duration: 0.1 }
+          { "--bg-scroller": colorValue, ease: "none", duration: 1 }
         );
       }
 
       timeline.to(root, {
         "--bg-scroller": endingColor,
         ease: "none",
-        duration: 0.1,
+        duration: 1,
         delay: 0.8
       });
     });
