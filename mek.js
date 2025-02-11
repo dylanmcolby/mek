@@ -1518,11 +1518,6 @@ function initLegacyHover() {
     });
   }
 
-  /*******************************************
- * Below is the entire edited code.
- * Changes are commented with "CHANGED" and
- * console logs are prefixed with "DEBUG".
- *******************************************/
 function initializeScrollEffects() {
   console.log("DEBUG: initializeScrollEffects called");
 
@@ -1558,28 +1553,36 @@ function initializeScrollEffects() {
               element.style.transform = "";
               element.style.opacity = "";
 
-              // CHANGED: Check for data-icon-animate on this element or its child
-              console.log("DEBUG: Checking for icon animation attribute...");
               const iconEl = element.hasAttribute("data-icon-animate")
                 ? element
                 : element.querySelector("[data-icon-animate]");
               if (iconEl) {
-                console.log("DEBUG: Found data-icon-animate, applying icon intro animation:", iconEl);
-                gsap.fromTo(
+                console.log("DEBUG: Found data-icon-animate, applying looping icon animation:", iconEl);
+                
+                // Create repeating timeline for icon animation
+                const iconTl = gsap.timeline({repeat: -1});
+                iconTl.fromTo(
                   iconEl,
                   { scale: 0.8, rotation: -10 },
                   {
                     scale: 1,
                     rotation: 0,
-                    duration: 0.5,
-                    ease: "elastic.out(1, 0.5)",
+                    duration: 1,
+                    ease: "elastic.out(1, 0.5)"
                   }
-                );
+                )
+                .to(iconEl, {
+                  scale: 0.8,
+                  rotation: -10,
+                  duration: 1,
+                  ease: "power2.in",
+                  delay: 4 // 4 second delay between animations
+                });
               }
             },
             scrollTrigger: {
               trigger: element,
-              start: "top bottom",
+              start: "top bottom", 
               toggleActions: "play none none reverse",
             },
           }
