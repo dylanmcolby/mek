@@ -1518,151 +1518,153 @@ window.mekApp = (function () {
     });
   }
 
-  /*******************************************
-   * Below is the entire edited code.
-   * Changes are commented with "CHANGED" and
-   * console logs are prefixed with "DEBUG".
-   *******************************************/
-  function initializeScrollEffects() {
-    console.log("DEBUG: initializeScrollEffects called");
+function initializeScrollEffects() {
+  console.log("DEBUG: initializeScrollEffects called");
 
-    // CHANGED: Helper function to play icon bounce
-    function playIconBounce(iconEl) {
-      console.log("DEBUG: Playing icon bounce animation on:", iconEl);
-      gsap.fromTo(
-        iconEl,
-        { scale: 0.8, rotation: -10 },
-        {
-          scale: 1,
-          rotation: 0,
-          duration: 1, // CHANGED: Slower animation to see the bounce
-          ease: "elastic.out(1, 0.75)",
-        }
-      );
-    }
+  // CHANGED: Replaced fromTo approach with a timeline-based bounce to avoid snapping
+  function playIconBounce(iconEl) {
+    console.log("DEBUG: Playing icon bounce animation on:", iconEl);
 
-    if (window.innerWidth > 768) {
-      // Initialize ScrollSmoother only on desktop
-      console.log("DEBUG: Screen width > 768, initializing ScrollSmoother");
+    // The icon is assumed to be at scale:1, rotation:0 in the DOM initially.
+    // We'll make a short timeline that goes up and then back down.
+    const tl = gsap.timeline({ defaults: { ease: "elastic.out(1, 0.75)" } });
 
-      const smoother = ScrollSmoother.create({
-        smooth: 1.25,
-        effects: true,
-        normalizeScroll: true,
+    // Scale up and rotate slightly, then return to normal for a bouncier effect
+    tl.to(iconEl, {
+      scale: 1.2,
+      rotation: -10,
+      duration: 0.75,
+    })
+      .to(iconEl, {
+        scale: 1,
+        rotation: 0,
+        duration: 0.75,
       });
-
-      // Smooth load animations
-      gsap.utils
-        .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
-        .forEach((element) => {
-          console.log("DEBUG: Processing single element for smooth load:", element);
-
-          const yOffset = element.dataset.smoothLoad || "4.5rem";
-          gsap.fromTo(
-            element,
-            { y: yOffset, opacity: 1 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 0.45,
-              ease: "power2.out",
-              immediateRender: false,
-              onComplete: () => {
-                console.log("DEBUG: Single element animation completed:", element);
-                // Remove inline styles after animation completes
-                element.style.transform = "";
-                element.style.opacity = "";
-
-                // CHANGED: Check for data-icon-animate on this element or its child
-                console.log("DEBUG: Checking for icon animation attribute...");
-                const iconEl = element.hasAttribute("data-icon-animate")
-                  ? element
-                  : element.querySelector("[data-icon-animate]");
-                if (iconEl) {
-                  console.log("DEBUG: Found data-icon-animate, applying icon intro animation:", iconEl);
-                  playIconBounce(iconEl);
-
-                  // CHANGED: Also play the bounce on hover of the wrapper
-                  element.addEventListener("mouseenter", () => {
-                    console.log("DEBUG: Hover detected on element:", element);
-                    playIconBounce(iconEl);
-                  });
-                }
-              },
-              scrollTrigger: {
-                trigger: element,
-                start: "top bottom",
-                toggleActions: "play none none reverse",
-              },
-            }
-          );
-        });
-
-      // Group stagger elements by their original row
-      const staggerEls = gsap.utils.toArray("[data-smooth-load][data-smooth-load-stagger]");
-      const groups = {};
-      staggerEls.forEach((el) => {
-        const top = Math.round(el.getBoundingClientRect().top);
-        if (!groups[top]) groups[top] = [];
-        groups[top].push(el);
-      });
-
-      Object.values(groups).forEach((group) => {
-        // Sort left-to-right
-        group.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
-
-        const yOffset = group[0].dataset.smoothLoad || "4.5rem";
-
-        // Create a timeline per row
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: group[0],
-            start: "top bottom",
-            toggleActions: "play none none reverse",
-          },
-        });
-
-        group.forEach((el, index) => {
-          console.log("DEBUG: Processing element in stagger group:", el);
-
-          tl.fromTo(
-            el,
-            { y: yOffset, opacity: 1 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 0.45 + index * 0.25,
-              ease: "power2.out",
-              immediateRender: false,
-              onComplete: () => {
-                console.log("DEBUG: Staggered element animation completed:", el);
-                // Remove inline styles after animation completes
-                el.style.transform = "";
-                el.style.opacity = "";
-
-                // CHANGED: Check for data-icon-animate on this element or its child
-                console.log("DEBUG: Checking for icon animation attribute in staggered element...");
-                const iconEl = el.hasAttribute("data-icon-animate")
-                  ? el
-                  : el.querySelector("[data-icon-animate]");
-                if (iconEl) {
-                  console.log("DEBUG: Found data-icon-animate in staggered element, applying icon intro animation:", iconEl);
-                  playIconBounce(iconEl);
-
-                  // CHANGED: Also play the bounce on hover of this wrapper
-                  el.addEventListener("mouseenter", () => {
-                    console.log("DEBUG: Hover detected on staggered element:", el);
-                    playIconBounce(iconEl);
-                  });
-                }
-              },
-            },
-            0
-          );
-        });
-      });
-    }
   }
+
+  if (window.innerWidth > 768) {
+    // Initialize ScrollSmoother only on desktop
+    console.log("DEBUG: Screen width > 768, initializing ScrollSmoother");
+
+    const smoother = ScrollSmoother.create({
+      smooth: 1.25,
+      effects: true,
+      normalizeScroll: true,
+    });
+
+    // Smooth load animations
+    gsap.utils
+      .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
+      .forEach((element) => {
+        console.log("DEBUG: Processing single element for smooth load:", element);
+
+        const yOffset = element.dataset.smoothLoad || "4.5rem";
+        gsap.fromTo(
+          element,
+          { y: yOffset, opacity: 1 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.45,
+            ease: "power2.out",
+            immediateRender: false,
+            onComplete: () => {
+              console.log("DEBUG: Single element animation completed:", element);
+              // Remove inline styles after animation completes
+              element.style.transform = "";
+              element.style.opacity = "";
+
+              // CHANGED: Check for data-icon-animate on this element or its child
+              console.log("DEBUG: Checking for icon animation attribute...");
+              const iconEl = element.hasAttribute("data-icon-animate")
+                ? element
+                : element.querySelector("[data-icon-animate]");
+              if (iconEl) {
+                console.log("DEBUG: Found data-icon-animate, applying icon intro animation:", iconEl);
+                playIconBounce(iconEl);
+
+                // Also play the bounce on hover of the wrapper
+                element.addEventListener("mouseenter", () => {
+                  console.log("DEBUG: Hover detected on element:", element);
+                  playIconBounce(iconEl);
+                });
+              }
+            },
+            scrollTrigger: {
+              trigger: element,
+              start: "top bottom",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
+    // Group stagger elements by their original row
+    const staggerEls = gsap.utils.toArray("[data-smooth-load][data-smooth-load-stagger]");
+    const groups = {};
+    staggerEls.forEach((el) => {
+      const top = Math.round(el.getBoundingClientRect().top);
+      if (!groups[top]) groups[top] = [];
+      groups[top].push(el);
+    });
+
+    Object.values(groups).forEach((group) => {
+      // Sort left-to-right
+      group.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+      const yOffset = group[0].dataset.smoothLoad || "4.5rem";
+
+      // Create a timeline per row
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: group[0],
+          start: "top bottom",
+          toggleActions: "play none none reverse",
+        },
+      });
+
+      group.forEach((el, index) => {
+        console.log("DEBUG: Processing element in stagger group:", el);
+
+        tl.fromTo(
+          el,
+          { y: yOffset, opacity: 1 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.45 + index * 0.25,
+            ease: "power2.out",
+            immediateRender: false,
+            onComplete: () => {
+              console.log("DEBUG: Staggered element animation completed:", el);
+              // Remove inline styles after animation completes
+              el.style.transform = "";
+              el.style.opacity = "";
+
+              // Check for data-icon-animate on this element or its child
+              console.log("DEBUG: Checking for icon animation attribute in staggered element...");
+              const iconEl = el.hasAttribute("data-icon-animate")
+                ? el
+                : el.querySelector("[data-icon-animate]");
+              if (iconEl) {
+                console.log("DEBUG: Found data-icon-animate in staggered element, applying icon intro animation:", iconEl);
+                playIconBounce(iconEl);
+
+                // Also play the bounce on hover of this wrapper
+                el.addEventListener("mouseenter", () => {
+                  console.log("DEBUG: Hover detected on staggered element:", el);
+                  playIconBounce(iconEl);
+                });
+              }
+            },
+          },
+          0
+        );
+      });
+    });
+  }
+}
+
 
 
 
