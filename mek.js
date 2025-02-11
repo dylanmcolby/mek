@@ -1518,28 +1518,45 @@ window.mekApp = (function () {
     });
   }
 
+
 function initializeScrollEffects() {
   console.log("DEBUG: initializeScrollEffects called");
 
-  // CHANGED: Replaced fromTo approach with a timeline-based bounce to avoid snapping
+  // CHANGED: Schedule a random replay of the bounce (between every 5-15s)
+  function scheduleRandomBounce(iconEl) {
+    const randomDelay = 5000 + Math.random() * 10000; // 5-15s (in milliseconds)
+    console.log("DEBUG: Scheduling next bounce for icon:", iconEl, "in", randomDelay, "ms");
+    setTimeout(() => {
+      console.log("DEBUG: Timer triggered bounce for icon:", iconEl);
+      playIconBounce(iconEl);
+    }, randomDelay);
+  }
+
+  // CHANGED: Timeline-based bounce to avoid snapping
+  // and schedule next bounce on complete
   function playIconBounce(iconEl) {
     console.log("DEBUG: Playing icon bounce animation on:", iconEl);
 
     // The icon is assumed to be at scale:1, rotation:0 in the DOM initially.
     // We'll make a short timeline that goes up and then back down.
-    const tl = gsap.timeline({ defaults: { ease: "elastic.out(1, 0.75)" } });
+    const tl = gsap.timeline({
+      defaults: { ease: "elastic.out(1, 0.75)" },
+      onComplete: () => {
+        console.log("DEBUG: Icon bounce animation completed:", iconEl);
+        scheduleRandomBounce(iconEl); // CHANGED: Schedule random bounce after each complete
+      },
+    });
 
     // Scale up and rotate slightly, then return to normal for a bouncier effect
     tl.to(iconEl, {
       scale: 1.2,
       rotation: -10,
       duration: 0.75,
-    })
-      .to(iconEl, {
-        scale: 1,
-        rotation: 0,
-        duration: 0.75,
-      });
+    }).to(iconEl, {
+      scale: 1,
+      rotation: 0,
+      duration: 0.75,
+    });
   }
 
   if (window.innerWidth > 768) {
@@ -1574,7 +1591,7 @@ function initializeScrollEffects() {
               element.style.transform = "";
               element.style.opacity = "";
 
-              // CHANGED: Check for data-icon-animate on this element or its child
+              // Check for data-icon-animate on this element or its child
               console.log("DEBUG: Checking for icon animation attribute...");
               const iconEl = element.hasAttribute("data-icon-animate")
                 ? element
@@ -1664,6 +1681,7 @@ function initializeScrollEffects() {
     });
   }
 }
+
 
 
 
