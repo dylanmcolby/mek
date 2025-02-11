@@ -1549,8 +1549,8 @@ function initializeScrollEffects() {
 
     // Scale up and rotate slightly, then return to normal for a bouncier effect
     tl.to(iconEl, {
-      scale: 1.2,
-      rotation: -10,
+      scale: 1.1,
+      rotation: -7.5,
       duration: 0.75,
     }).to(iconEl, {
       scale: 1,
