@@ -1518,32 +1518,23 @@ window.mekApp = (function () {
     });
   }
 
-
 function initializeScrollEffects() {
-  console.log("DEBUG: initializeScrollEffects called");
-
-  // CHANGED: Schedule a random replay of the bounce (between every 5-15s)
+  // Schedule a random replay of the bounce (between every 5-15s)
   function scheduleRandomBounce(iconEl) {
     const randomDelay = 5000 + Math.random() * 10000; // 5-15s (in milliseconds)
-    console.log("DEBUG: Scheduling next bounce for icon:", iconEl, "in", randomDelay, "ms");
     setTimeout(() => {
-      console.log("DEBUG: Timer triggered bounce for icon:", iconEl);
       playIconBounce(iconEl);
     }, randomDelay);
   }
 
-  // CHANGED: Timeline-based bounce to avoid snapping
-  // and schedule next bounce on complete
+  // Timeline-based bounce to avoid snapping
   function playIconBounce(iconEl) {
-    console.log("DEBUG: Playing icon bounce animation on:", iconEl);
-
     // The icon is assumed to be at scale:1, rotation:0 in the DOM initially.
     // We'll make a short timeline that goes up and then back down.
     const tl = gsap.timeline({
       defaults: { ease: "elastic.out(1, 0.75)" },
       onComplete: () => {
-        console.log("DEBUG: Icon bounce animation completed:", iconEl);
-        scheduleRandomBounce(iconEl); // CHANGED: Schedule random bounce after each complete
+        scheduleRandomBounce(iconEl); // Schedule next random bounce
       },
     });
 
@@ -1561,8 +1552,6 @@ function initializeScrollEffects() {
 
   if (window.innerWidth > 768) {
     // Initialize ScrollSmoother only on desktop
-    console.log("DEBUG: Screen width > 768, initializing ScrollSmoother");
-
     const smoother = ScrollSmoother.create({
       smooth: 1.25,
       effects: true,
@@ -1573,8 +1562,6 @@ function initializeScrollEffects() {
     gsap.utils
       .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
       .forEach((element) => {
-        console.log("DEBUG: Processing single element for smooth load:", element);
-
         const yOffset = element.dataset.smoothLoad || "4.5rem";
         gsap.fromTo(
           element,
@@ -1586,25 +1573,19 @@ function initializeScrollEffects() {
             ease: "power2.out",
             immediateRender: false,
             onComplete: () => {
-              console.log("DEBUG: Single element animation completed:", element);
-              // Remove inline styles after animation completes
               element.style.transform = "";
               element.style.opacity = "";
 
               // Check for data-icon-animate on this element or its child
-              console.log("DEBUG: Checking for icon animation attribute...");
               const iconEl = element.hasAttribute("data-icon-animate")
                 ? element
                 : element.querySelector("[data-icon-animate]");
               if (iconEl) {
-                console.log("DEBUG: Found data-icon-animate, applying icon intro animation:", iconEl);
-                playIconBounce(iconEl);
-
-                // Also play the bounce on hover of the wrapper
+                // Set up hover animation and start random bounces
                 element.addEventListener("mouseenter", () => {
-                  console.log("DEBUG: Hover detected on element:", element);
                   playIconBounce(iconEl);
                 });
+                scheduleRandomBounce(iconEl);
               }
             },
             scrollTrigger: {
@@ -1641,8 +1622,6 @@ function initializeScrollEffects() {
       });
 
       group.forEach((el, index) => {
-        console.log("DEBUG: Processing element in stagger group:", el);
-
         tl.fromTo(
           el,
           { y: yOffset, opacity: 1 },
@@ -1653,25 +1632,19 @@ function initializeScrollEffects() {
             ease: "power2.out",
             immediateRender: false,
             onComplete: () => {
-              console.log("DEBUG: Staggered element animation completed:", el);
-              // Remove inline styles after animation completes
               el.style.transform = "";
               el.style.opacity = "";
 
               // Check for data-icon-animate on this element or its child
-              console.log("DEBUG: Checking for icon animation attribute in staggered element...");
               const iconEl = el.hasAttribute("data-icon-animate")
                 ? el
                 : el.querySelector("[data-icon-animate]");
               if (iconEl) {
-                console.log("DEBUG: Found data-icon-animate in staggered element, applying icon intro animation:", iconEl);
-                playIconBounce(iconEl);
-
-                // Also play the bounce on hover of this wrapper
+                // Set up hover animation and start random bounces
                 el.addEventListener("mouseenter", () => {
-                  console.log("DEBUG: Hover detected on staggered element:", el);
                   playIconBounce(iconEl);
                 });
+                scheduleRandomBounce(iconEl);
               }
             },
           },
