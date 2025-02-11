@@ -1857,8 +1857,8 @@ function initializeScrollEffects() {
       const timeline = gsap.timeline({
         scrollTrigger: {
           trigger: trigger,
-          start: "top bottom-=40%",
-          end: "bottom top+=40%",
+          start: "top bottom-=25%",
+          end: "bottom top+=35%",
           scrub: true,
           onEnter: () => { },
           onLeave: () => { },
