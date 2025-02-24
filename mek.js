@@ -1295,8 +1295,8 @@ window.mekApp = (function () {
       tl.to(
         circle,
         {
-          width: "min(120vmax)",
-          height: "min(120vmax)",
+          width: "120vmax",
+          height: "120vmax",
           duration: 0.275,
           ease: "power2.in",
         },
@@ -1363,8 +1363,8 @@ window.mekApp = (function () {
         .to(
           circle,
           {
-            width: "0vmax",
-            height: "0vmax",
+            width: "min(0vmax, 0px)",
+            height: "min(0vmax, 0px)",
             duration: 0.275,
             ease: "linear",
           },
