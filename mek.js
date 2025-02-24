@@ -748,6 +748,13 @@ window.mekApp = (function () {
       console.log("Initializing video triggers...");
       triggers.forEach((trigger) => {
         let videoId = trigger.getAttribute("data-vimeo-trigger");
+        let bgPlayer = null;
+
+        // Get background video player if it exists
+        const bgVideo = trigger.querySelector('[data-vimeo-bg-id]');
+        if (bgVideo && bgVideo.querySelector('iframe')) {
+          bgPlayer = new Vimeo.Player(bgVideo.querySelector('iframe'));
+        }
 
         // Build video URL with ID and autoplay
         let videoUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1`;
@@ -841,8 +848,6 @@ window.mekApp = (function () {
           // Fade in modal
           gsap.fromTo(modal, { opacity: 0 }, { opacity: 1, duration: 0.5 });
 
-          // disableScroll();
-
           // Initialize Vimeo player
           const player = new Vimeo.Player(iframe);
 
@@ -857,7 +862,12 @@ window.mekApp = (function () {
               onComplete: () => {
                 player.unload().then(() => {
                   modal.parentNode.removeChild(modal);
-                  // enableScroll();
+                  // Resume background video if it exists
+                  if (bgPlayer) {
+                    bgPlayer.play().catch(() => {
+                      console.log('Could not resume background video');
+                    });
+                  }
                 });
               },
             });
