@@ -1135,7 +1135,7 @@ window.mekApp = (function () {
 
   function setupHomeScrollAnimation() {
     // Enable normalized scrolling with nested scroll support
-    ScrollTrigger.normalizeScroll({ allowNestedScroll: true });
+    ScrollTrigger.normalizeScroll(true);
 
     const scrollAnimElement = document.querySelector("#home-scroll-anim");
     if (!scrollAnimElement) return;
@@ -1245,6 +1245,7 @@ window.mekApp = (function () {
   }
 
   function setupSSAnimation() {
+    
     const ssElement = document.querySelector("#ss-intro");
     if (!ssElement) return;
 
@@ -1262,6 +1263,8 @@ window.mekApp = (function () {
 
     const scrollEncourager = document.querySelector("#scroll-encourager");
     if (!scrollEncourager) return;
+
+    ScrollTrigger.normalizeScroll(true);
 
     if (window.innerWidth <= 767) {
       gsap.set(ssElement, {
