@@ -1418,19 +1418,10 @@ window.mekApp = (function () {
         );
     }
 
-    tl.to(
+    tl.fromTo(
       scrollEncourager,
-      {
-        opacity: 1,
-        duration: 0.01,
-      },
-      0
-    ).to(
-      scrollEncourager,
-      {
-        opacity: 0,
-        duration: 0.025,
-      },
+      { opacity: 1, pointerEvents: "auto" },
+      { opacity: 0, pointerEvents: "none", duration: 0.025 },
       0.375
     );
   }
