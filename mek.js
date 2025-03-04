@@ -1121,7 +1121,6 @@ window.mekApp = (function () {
   }
 
   function setupHomeScrollAnimation() {
-    // if (window.innerWidth <= 767) return;
     // Enable normalized scrolling with nested scroll support
     ScrollTrigger.normalizeScroll(true);
 
@@ -1178,7 +1177,7 @@ window.mekApp = (function () {
 
 
     if (isMobile) {
-      // Mobile animation timeline - adjusted durations and values
+      // Mobile animation timeline - only change logo size and fade out intro text
       tl.fromTo(
         navLogo,
         { width: "100%", marginTop: "0rem" },
