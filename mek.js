@@ -171,6 +171,9 @@ window.mekApp = (function () {
   }
 
   function setupLoadInAnimations() {
+    // Only run on desktop
+    if (window.innerWidth <= 767) return;
+    
     const loadElements = document.querySelectorAll("[data-load]");
 
     loadElements.forEach((element) => {
@@ -438,22 +441,6 @@ window.mekApp = (function () {
       new Swiper(swiperEl, swiperOptions);
     });
   }
-
-  /*******************************
-  * Updated initLegacyHover Function
-  *******************************/
-
-  /**
-  * This version adds a "fake cursor move" mechanism.
-  * While the cursor remains inside the .legacy_list-item but not physically moving,
-  * we periodically trigger the onMouseMove handler (every 25ms) with the last known
-  * pointer coordinates. This keeps GSAP position updates fresh, preventing abrupt
-  * element jumps when the cursor is still.
-  *
-  * Additional changes:
-  * - Only show the loading spinner if there is a valid Vimeo video ID.
-  * - Generous 'DEBUG' console logs for troubleshooting.
-  */
 
   function initLegacyHover() {
     console.log('DEBUG: initLegacyHover called.');
@@ -1134,6 +1121,7 @@ window.mekApp = (function () {
   }
 
   function setupHomeScrollAnimation() {
+    if (window.innerWidth <= 767) return;
     // Enable normalized scrolling with nested scroll support
     ScrollTrigger.normalizeScroll(true);
 
@@ -1233,6 +1221,7 @@ window.mekApp = (function () {
   }
 
   function setupScrollEncourager() {
+    if (window.innerWidth <= 767) return;
     const scrollEncourager = document.querySelector("#scroll-encourager");
     if (!scrollEncourager) return;
 
@@ -1245,7 +1234,7 @@ window.mekApp = (function () {
   }
 
   function setupSSAnimation() {
-    
+    if (window.innerWidth <= 767) return;
     const ssElement = document.querySelector("#ss-intro");
     if (!ssElement) return;
 
@@ -1441,6 +1430,7 @@ window.mekApp = (function () {
   }
 
   function setupTextAnimations() {
+    if (window.innerWidth <= 767) return;
     document.querySelectorAll("[data-text-fadein]").forEach((element) => {
       const split = new SplitText(element, {
         type: "chars, words",
@@ -1534,6 +1524,7 @@ window.mekApp = (function () {
   }
 
 function initializeScrollEffects() {
+  if (window.innerWidth <= 767) return;
   // Schedule a random replay of the bounce (between every 5-15s)
   function scheduleRandomBounce(iconEl) {
     const randomDelay = 5000 + Math.random() * 10000; // 5-15s (in milliseconds)
@@ -1669,9 +1660,6 @@ function initializeScrollEffects() {
     });
   }
 }
-
-
-
 
 
   function setupSSHero() {
