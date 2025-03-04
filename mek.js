@@ -1123,11 +1123,7 @@ window.mekApp = (function () {
   // CHANGED: Only enable ScrollTrigger.normalizeScroll(true) if NOT on mobile
   function setupHomeScrollAnimation() {
     const isMobile = window.innerWidth <= 767;
-    if (!isMobile) {
-      // Enable normalized scrolling with nested scroll support
-      ScrollTrigger.normalizeScroll(true);
-    }
-
+    
     const scrollAnimElement = document.querySelector("#home-scroll-anim");
     if (!scrollAnimElement) return;
     const reel = document.querySelector("#home-scroll-anim-reel");
@@ -1254,8 +1250,6 @@ window.mekApp = (function () {
 
     const scrollEncourager = document.querySelector("#scroll-encourager");
     if (!scrollEncourager) return;
-
-    ScrollTrigger.normalizeScroll(true);
 
     if (window.innerWidth <= 767) {
       gsap.set(ssElement, {
@@ -1563,7 +1557,6 @@ window.mekApp = (function () {
       const smoother = ScrollSmoother.create({
         smooth: 1.25,
         effects: true,
-        normalizeScroll: true,
       });
 
       // Smooth load animations
