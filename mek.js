@@ -1563,12 +1563,12 @@ function initializeScrollEffects() {
   }
 
   if (window.innerWidth > 768) {
-    // Initialize ScrollSmoother only on desktop
-    const smoother = ScrollSmoother.create({
-      smooth: 1.25,
-      effects: true,
-      normalizeScroll: true,
-    });
+    // // Initialize ScrollSmoother only on desktop
+    // const smoother = ScrollSmoother.create({
+    //   smooth: 1.25,
+    //   effects: true,
+    //   normalizeScroll: true,
+    // });
 
     // Smooth load animations
     gsap.utils
