@@ -1225,8 +1225,8 @@ window.mekApp = (function () {
         )
         .fromTo(
           scrollEncourager,
-          { opacity: 1 },
-          { opacity: 0, duration: 0.1 },
+          { opacity: 1, pointerEvents: "auto" },
+          { opacity: 0, pointerEvents: "none", duration: 0.1 },
           0.45
         );
     }
