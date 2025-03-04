@@ -2111,6 +2111,7 @@ function initializeScrollEffects() {
 
   function handleScroll() {
     const currentScrollY = window.scrollY;
+    const isMobile = window.innerWidth <= 767;
 
     // Handle page-scrolled class
     if (currentScrollY > 1) {
@@ -2120,14 +2121,15 @@ function initializeScrollEffects() {
     }
 
     // Handle nav visibility
-    if (!dataNavHideElements.length) {
-      // Default behavior - hide nav on scroll
+    if (isMobile || !dataNavHideElements.length) {
+      // Default behavior - hide nav on scroll (always use this on mobile)
       if (currentScrollY > 1) {
         document.body.classList.add("nav-hide");
       } else {
         document.body.classList.remove("nav-hide");
       }
     } else {
+      // Only use trigger elements on desktop
       // Find the most recently passed trigger element
       let lastPassedElement = null;
       dataNavHideElements.forEach((el) => {
