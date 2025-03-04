@@ -1120,9 +1120,13 @@ window.mekApp = (function () {
     });
   }
 
+  // CHANGED: Only enable ScrollTrigger.normalizeScroll(true) if NOT on mobile
   function setupHomeScrollAnimation() {
-    // Enable normalized scrolling with nested scroll support
-    ScrollTrigger.normalizeScroll(true);
+    const isMobile = window.innerWidth <= 767;
+    if (!isMobile) {
+      // Enable normalized scrolling with nested scroll support
+      ScrollTrigger.normalizeScroll(true);
+    }
 
     const scrollAnimElement = document.querySelector("#home-scroll-anim");
     if (!scrollAnimElement) return;
@@ -1138,15 +1142,15 @@ window.mekApp = (function () {
     navLogo.style.transition = "none";
 
     // Check window width and create appropriate timeline
-    const isMobile = window.innerWidth <= 767;
+    const isMobileWidth = window.innerWidth <= 767;
 
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: scrollAnimElement,
         start: "top top",
-        end: isMobile ? "bottom center" : "+=2150", // Mobile uses element bottom
-        pin: !isMobile, // Only pin on desktop
-        scrub: isMobile ? 0.5 : 1, // Faster scrub on mobile
+        end: isMobileWidth ? "bottom center" : "+=2150", // Mobile uses element bottom
+        pin: !isMobileWidth, // Only pin on desktop
+        scrub: isMobileWidth ? 0.5 : 1, // Faster scrub on mobile
         onEnter: () => {
           navLogo.style.transition = "none";
         },
@@ -1175,8 +1179,7 @@ window.mekApp = (function () {
 
     resizeObserver.observe(document.body);
 
-
-    if (isMobile) {
+    if (isMobileWidth) {
       // Mobile animation timeline - only change logo size and fade out intro text
       tl.fromTo(
         navLogo,
@@ -1522,144 +1525,143 @@ window.mekApp = (function () {
     });
   }
 
-function initializeScrollEffects() {
-  if (window.innerWidth <= 767) return;
-  // Schedule a random replay of the bounce (between every 5-15s)
-  function scheduleRandomBounce(iconEl) {
-    const randomDelay = 5000 + Math.random() * 10000; // 5-15s (in milliseconds)
-    setTimeout(() => {
-      playIconBounce(iconEl);
-    }, randomDelay);
-  }
+  function initializeScrollEffects() {
+    if (window.innerWidth <= 767) return;
+    // Schedule a random replay of the bounce (between every 5-15s)
+    function scheduleRandomBounce(iconEl) {
+      const randomDelay = 5000 + Math.random() * 10000; // 5-15s (in milliseconds)
+      setTimeout(() => {
+        playIconBounce(iconEl);
+      }, randomDelay);
+    }
 
-  // Timeline-based bounce to avoid snapping
-  function playIconBounce(iconEl) {
-    // The icon is assumed to be at scale:1, rotation:0 in the DOM initially.
-    // We'll make a short timeline that goes up and then back down.
-    const tl = gsap.timeline({
-      defaults: { ease: "elastic.out(1, 0.75)" },
-      onComplete: () => {
-        scheduleRandomBounce(iconEl); // Schedule next random bounce
-      },
-    });
-
-    // Scale up and rotate slightly, then return to normal for a bouncier effect
-    tl.to(iconEl, {
-      scale: 1.05,
-      rotation: -7.5,
-      duration: 0.75,
-    }).to(iconEl, {
-      scale: 1,
-      rotation: 0,
-      duration: 0.75,
-    });
-  }
-
-  if (window.innerWidth > 768) {
-    // Initialize ScrollSmoother only on desktop
-    const smoother = ScrollSmoother.create({
-      smooth: 1.25,
-      effects: true,
-      normalizeScroll: true,
-    });
-
-    // Smooth load animations
-    gsap.utils
-      .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
-      .forEach((element) => {
-        const yOffset = element.dataset.smoothLoad || "4.5rem";
-        gsap.fromTo(
-          element,
-          { y: yOffset, opacity: 1 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.45,
-            ease: "power2.out",
-            immediateRender: false,
-            onComplete: () => {
-              element.style.transform = "";
-              element.style.opacity = "";
-
-              // Check for data-icon-animate on this element or its child
-              const iconEl = element.hasAttribute("data-icon-animate")
-                ? element
-                : element.querySelector("[data-icon-animate]");
-              if (iconEl) {
-                // Set up hover animation and start random bounces
-                element.addEventListener("mouseenter", () => {
-                  playIconBounce(iconEl);
-                });
-                scheduleRandomBounce(iconEl);
-              }
-            },
-            scrollTrigger: {
-              trigger: element,
-              start: "top bottom",
-              toggleActions: "play none none reverse",
-            },
-          }
-        );
-      });
-
-    // Group stagger elements by their original row
-    const staggerEls = gsap.utils.toArray("[data-smooth-load][data-smooth-load-stagger]");
-    const groups = {};
-    staggerEls.forEach((el) => {
-      const top = Math.round(el.getBoundingClientRect().top);
-      if (!groups[top]) groups[top] = [];
-      groups[top].push(el);
-    });
-
-    Object.values(groups).forEach((group) => {
-      // Sort left-to-right
-      group.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
-
-      const yOffset = group[0].dataset.smoothLoad || "4.5rem";
-
-      // Create a timeline per row
+    // Timeline-based bounce to avoid snapping
+    function playIconBounce(iconEl) {
+      // The icon is assumed to be at scale:1, rotation:0 in the DOM initially.
+      // We'll make a short timeline that goes up and then back down.
       const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: group[0],
-          start: "top bottom",
-          toggleActions: "play none none reverse",
+        defaults: { ease: "elastic.out(1, 0.75)" },
+        onComplete: () => {
+          scheduleRandomBounce(iconEl); // Schedule next random bounce
         },
       });
 
-      group.forEach((el, index) => {
-        tl.fromTo(
-          el,
-          { y: yOffset, opacity: 1 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.45 + index * 0.25,
-            ease: "power2.out",
-            immediateRender: false,
-            onComplete: () => {
-              el.style.transform = "";
-              el.style.opacity = "";
-
-              // Check for data-icon-animate on this element or its child
-              const iconEl = el.hasAttribute("data-icon-animate")
-                ? el
-                : el.querySelector("[data-icon-animate]");
-              if (iconEl) {
-                // Set up hover animation and start random bounces
-                el.addEventListener("mouseenter", () => {
-                  playIconBounce(iconEl);
-                });
-                scheduleRandomBounce(iconEl);
-              }
-            },
-          },
-          0
-        );
+      // Scale up and rotate slightly, then return to normal for a bouncier effect
+      tl.to(iconEl, {
+        scale: 1.05,
+        rotation: -7.5,
+        duration: 0.75,
+      }).to(iconEl, {
+        scale: 1,
+        rotation: 0,
+        duration: 0.75,
       });
-    });
-  }
-}
+    }
 
+    if (window.innerWidth > 768) {
+      // Initialize ScrollSmoother only on desktop
+      const smoother = ScrollSmoother.create({
+        smooth: 1.25,
+        effects: true,
+        normalizeScroll: true,
+      });
+
+      // Smooth load animations
+      gsap.utils
+        .toArray("[data-smooth-load]:not([data-smooth-load-stagger])")
+        .forEach((element) => {
+          const yOffset = element.dataset.smoothLoad || "4.5rem";
+          gsap.fromTo(
+            element,
+            { y: yOffset, opacity: 1 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.45,
+              ease: "power2.out",
+              immediateRender: false,
+              onComplete: () => {
+                element.style.transform = "";
+                element.style.opacity = "";
+
+                // Check for data-icon-animate on this element or its child
+                const iconEl = element.hasAttribute("data-icon-animate")
+                  ? element
+                  : element.querySelector("[data-icon-animate]");
+                if (iconEl) {
+                  // Set up hover animation and start random bounces
+                  element.addEventListener("mouseenter", () => {
+                    playIconBounce(iconEl);
+                  });
+                  scheduleRandomBounce(iconEl);
+                }
+              },
+              scrollTrigger: {
+                trigger: element,
+                start: "top bottom",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        });
+
+      // Group stagger elements by their original row
+      const staggerEls = gsap.utils.toArray("[data-smooth-load][data-smooth-load-stagger]");
+      const groups = {};
+      staggerEls.forEach((el) => {
+        const top = Math.round(el.getBoundingClientRect().top);
+        if (!groups[top]) groups[top] = [];
+        groups[top].push(el);
+      });
+
+      Object.values(groups).forEach((group) => {
+        // Sort left-to-right
+        group.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+        const yOffset = group[0].dataset.smoothLoad || "4.5rem";
+
+        // Create a timeline per row
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: group[0],
+            start: "top bottom",
+            toggleActions: "play none none reverse",
+          },
+        });
+
+        group.forEach((el, index) => {
+          tl.fromTo(
+            el,
+            { y: yOffset, opacity: 1 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.45 + index * 0.25,
+              ease: "power2.out",
+              immediateRender: false,
+              onComplete: () => {
+                el.style.transform = "";
+                el.style.opacity = "";
+
+                // Check for data-icon-animate on this element or its child
+                const iconEl = el.hasAttribute("data-icon-animate")
+                  ? el
+                  : el.querySelector("[data-icon-animate]");
+                if (iconEl) {
+                  // Set up hover animation and start random bounces
+                  el.addEventListener("mouseenter", () => {
+                    playIconBounce(iconEl);
+                  });
+                  scheduleRandomBounce(iconEl);
+                }
+              },
+            },
+            0
+          );
+        });
+      });
+    }
+  }
 
   function setupSSHero() {
     const ssHeroContent = document.querySelector('.ss-hero_content');
