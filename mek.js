@@ -1253,7 +1253,7 @@ window.mekApp = (function () {
     const isMobile = window.innerWidth <= 767;
 
     if (isMobile) {
-      // Mobile animation - no pinning, just scale animations
+      // Mobile animation - scroll-based with delay
       gsap.set(hugeText, { scale: 0 });
       gsap.set(button, { scale: 0 });
 
@@ -1261,9 +1261,10 @@ window.mekApp = (function () {
         scrollTrigger: {
           trigger: ssElement,
           start: "top 50%",
+          end: "top 10%",
+          scrub: 1,
           toggleActions: "play none none none",
-        },
-        delay: 0.25
+        }
       });
 
       mobileTl
@@ -1271,12 +1272,12 @@ window.mekApp = (function () {
           scale: 1,
           duration: 0.5,
           ease: "power2.out"
-        })
+        }, 0.5) // Increased delay for the hugeText animation
         .to(button, {
           scale: 1,
           duration: 0.5,
           ease: "power2.out"
-        }, "-=0.3");
+        }, 0.8); // Increased delay for the button animation
     } else {
       // Desktop animation with pinning
       gsap.set(ssElement, {
