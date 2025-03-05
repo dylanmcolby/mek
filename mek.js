@@ -1232,7 +1232,6 @@ window.mekApp = (function () {
   }
 
   function setupSSAnimation() {
-    if (window.innerWidth <= 767) return;
     const ssElement = document.querySelector("#ss-intro");
     if (!ssElement) return;
 
@@ -1251,102 +1250,64 @@ window.mekApp = (function () {
     const scrollEncourager = document.querySelector("#scroll-encourager");
     if (!scrollEncourager) return;
 
-    if (window.innerWidth <= 767) {
-      gsap.set(ssElement, {
-        y: "-40svh",
+    const isMobile = window.innerWidth <= 767;
+
+    if (isMobile) {
+      // Mobile animation - no pinning, just scale animations
+      gsap.set(hugeText, { scale: 0 });
+      gsap.set(button, { scale: 0 });
+
+      const mobileTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: ssElement,
+          start: "top 50%",
+          toggleActions: "play none none none",
+        },
+        delay: 0.25
       });
+
+      mobileTl
+        .to(hugeText, {
+          scale: 1,
+          duration: 0.5,
+          ease: "power2.out"
+        })
+        .to(button, {
+          scale: 1,
+          duration: 0.5,
+          ease: "power2.out"
+        }, "-=0.3");
     } else {
+      // Desktop animation with pinning
       gsap.set(ssElement, {
         y: "-25vh",
       });
-    }
 
-    const isMobile = window.innerWidth <= 767;
-
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: ssElement,
-        start: "top top",
-        end: isMobile ? "+=5500" : "+=7000",
-        pin: true,
-        pinSpacing: false,
-        scrub: isMobile ? 0.3 : 0.5,
-        invalidateOnRefresh: true,
-      },
-    });
-
-    let lastRefreshTime = 0;
-    const resizeObserver = new ResizeObserver(() => {
-      const now = Date.now();
-      if (now - lastRefreshTime >= 100) {
-        ScrollTrigger.refresh();
-        lastRefreshTime = now;
-      }
-    });
-
-    resizeObserver.observe(document.body);
-
-    tl.set({}, { duration: 0.9 });
-
-    if (isMobile) {
-      // Mobile animation timeline
-      tl.to(
-        circle,
-        {
-          width: "120vmax",
-          height: "120vmax",
-          duration: 0.275,
-          ease: "power2.in",
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: ssElement,
+          start: "top top",
+          end: "+=7000",
+          pin: true,
+          pinSpacing: false,
+          scrub: 0.5,
+          invalidateOnRefresh: true,
         },
-        0.125
-      )
-        .to(
-          circle,
-          {
-            width: "0vmax",
-            height: "0vmax",
-            duration: 0.275,
-            ease: "linear",
-          },
-          0.575
-        )
-        .to(
-          heading,
-          {
-            opacity: 0,
-            duration: 0.01,
-            ease: "linear",
-          },
-          0.55
-        )
-        .to(
-          hugeText,
-          {
-            transform: "translateX(calc(-100% - 115vw))",
-            duration: 0.8,
-            ease: "slow",
-          },
-          0.25
-        )
-        .to(
-          button,
-          {
-            scale: 0.8,
-            duration: 0.3,
-            ease: "power2.out",
-          },
-          0.35
-        )
-        .to(
-          button,
-          {
-            scale: 0,
-            duration: 0.2,
-            ease: "power2.in",
-          },
-          0.6
-        );
-    } else {
+      });
+
+      let lastRefreshTime = 0;
+      const resizeObserver = new ResizeObserver(() => {
+        const now = Date.now();
+        if (now - lastRefreshTime >= 100) {
+          ScrollTrigger.refresh();
+          lastRefreshTime = now;
+        }
+      });
+
+      resizeObserver.observe(document.body);
+
+      tl.set({}, { duration: 0.9 });
+
       // Desktop animation timeline
       tl.to(
         circle,
@@ -1404,25 +1365,25 @@ window.mekApp = (function () {
           },
           0.6
         );
-    }
 
-    tl.to(
-      scrollEncourager,
-      {
-        opacity: 1,
-        duration: 0.01,
-        pointerEvents: "auto",
-      },
-      0
-    ).to(
-      scrollEncourager,
-      {
-        opacity: 0,
-        duration: 0.025,
-        pointerEvents: "none"
-      },
-      0.375
-    );
+      tl.to(
+        scrollEncourager,
+        {
+          opacity: 1,
+          duration: 0.01,
+          pointerEvents: "auto",
+        },
+        0
+      ).to(
+        scrollEncourager,
+        {
+          opacity: 0,
+          duration: 0.025,
+          pointerEvents: "none"
+        },
+        0.375
+      );
+    }
   }
 
   function setupTextAnimations() {
