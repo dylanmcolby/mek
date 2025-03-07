@@ -213,16 +213,16 @@ window.mekApp = (function () {
     if (!allLogos.length) return;
     const container = document.querySelector(".clients_logos-grid");
     if (!container) return;
-
-    let masterTimeline; // store timeline instance
-
+  
+    let masterTimeline;
+  
     function setupLogos() {
       // Kill any previous timeline and its ScrollTrigger
       if (masterTimeline) {
         masterTimeline.kill();
         if (masterTimeline.scrollTrigger) masterTimeline.scrollTrigger.kill();
       }
-
+  
       // Clear container and reset inline styles on logos
       container.innerHTML = "";
       allLogos.forEach((logo) => {
@@ -230,7 +230,7 @@ window.mekApp = (function () {
         logo.style.width = "";
         gsap.set(logo, { clearProps: "all" });
       });
-
+  
       // Set columns based on viewport
       let columns = 6,
         rows = 1;
@@ -238,7 +238,7 @@ window.mekApp = (function () {
       if (window.innerWidth < 768 && window.innerWidth >= 480) columns = 3;
       const totalBoxes = columns * rows;
       const boxes = [];
-
+  
       // Create placeholder boxes and make them relative for absolute children
       for (let i = 0; i < totalBoxes; i++) {
         const box = document.createElement("div");
@@ -247,13 +247,13 @@ window.mekApp = (function () {
         container.appendChild(box);
         boxes.push(box);
       }
-
+  
       // Distribute logos into boxes
       allLogos.forEach((logo, i) => {
         const boxIndex = i % totalBoxes;
         boxes[boxIndex].appendChild(logo);
       });
-
+  
       // Build master timeline, initialize as paused
       masterTimeline = gsap.timeline({
         repeat: -1,
@@ -269,32 +269,14 @@ window.mekApp = (function () {
           onLeaveBack: () => masterTimeline.pause(),
         },
       });
-
+  
       // Only animate boxes with multiple logos
       const activeBoxes = boxes.filter((box) => box.children.length > 1);
-
-      // Shuffle indices (avoiding adjacent swaps)
-      const shuffleIndices = (length) => {
-        const indices = Array.from({ length }, (_, i) => i);
-        for (let i = length - 1; i > 0; i--) {
-          let j;
-          do {
-            j = Math.floor(Math.random() * (i + 1));
-          } while (Math.abs(i - j) === 1);
-          [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        return indices;
-      };
-
-      const shuffledIndices = shuffleIndices(activeBoxes.length);
-
-      shuffledIndices.forEach((originalIndex, i) => {
-        const box = activeBoxes[originalIndex];
-        const numLogos = box.children.length;
-        const boxTimeline = gsap.timeline();
-
-        // Reset initial state: first logo visible, others hidden and positioned
-        Array.from(box.children).forEach((logo, index) => {
+  
+      // Set initial visible logo (first child) and hide others
+      activeBoxes.forEach((box) => {
+        const kids = Array.from(box.children);
+        kids.forEach((logo, index) => {
           gsap.set(logo, {
             y: 0,
             opacity: index === 0 ? 1 : 0,
@@ -302,28 +284,63 @@ window.mekApp = (function () {
             width: "100%",
           });
         });
-
-        for (let j = 0; j < numLogos; j++) {
-          const currentLogo = box.children[j];
-          const nextLogo = box.children[(j + 1) % numLogos];
+      });
+  
+      // Utility: Least Common Multiple
+      function lcm(a, b) {
+        return (!a || !b) ? 0 : Math.abs((a * b) / gcd(a, b));
+      }
+      // Utility: Greatest Common Divisor
+      function gcd(a, b) {
+        return b === 0 ? a : gcd(b, a % b);
+      }
+  
+      // We'll cycle until all boxes return to their original logo at once.
+      // That's the LCM of the number of logos in each active box:
+      const cycleLength = activeBoxes.reduce((acc, box) => {
+        const n = box.children.length;
+        return lcm(acc, n);
+      }, 1);
+  
+      // Build the timeline so each "row change" (step) triggers
+      // a next-logo transition in every column simultaneously
+      for (let j = 0; j < cycleLength; j++) {
+        activeBoxes.forEach((box, boxIndex) => {
+          const numLogos = box.children.length;
+          // current index in this box's sequence
+          const currentIdx = j % numLogos;
+          const nextIdx = (j + 1) % numLogos;
+  
+          const currentLogo = box.children[currentIdx];
+          const nextLogo = box.children[nextIdx];
+  
+          // Pick a random direction so each column slides out differently
           const dir = Math.random() < 0.5 ? "50%" : "-50%";
-
-          boxTimeline.to(
+          const oppositeDir = dir === "50%" ? "-50%" : "50%";
+  
+          // Animate the current logo out with stagger
+          masterTimeline.to(
             currentLogo,
             {
               y: dir,
               opacity: 0,
               duration: 0.5,
               ease: "power4.out",
+              stagger: {
+                amount: 0.1,
+                from: "start",
+              },
             },
-            j * 4
+            j * 4 // each step j pinned at j*4 seconds
           );
-
-          boxTimeline.fromTo(
+  
+          // Animate the next logo in with stagger
+          masterTimeline.fromTo(
             nextLogo,
             {
-              y: dir === "50%" ? "-50%" : "50%",
+              y: oppositeDir,
               opacity: 0,
+              position: "absolute",
             },
             {
               y: "0%",
@@ -331,24 +348,31 @@ window.mekApp = (function () {
               duration: 0.5,
               ease: "power4.out",
               immediateRender: false,
+              stagger: {
+                amount: 0.1,
+                from: "start",
+              },
+              // once it's in, make it "relative" so it's on top
+              onComplete: () => {
+                gsap.set(nextLogo, { position: "relative" });
+                gsap.set(currentLogo, { position: "absolute", opacity: 0 });
+              },
             },
             j * 4
           );
-        }
-
-        masterTimeline.add(boxTimeline, i * 0.05);
-      });
+        });
+      }
     }
-
+  
     setupLogos();
-
+  
     let resizeTimeout;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(setupLogos, 250);
     });
   }
-
+  
 
   function convertEmptyHrefs() {
     // Find all anchor tags with empty or # hrefs
