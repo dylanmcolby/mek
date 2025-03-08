@@ -1805,11 +1805,10 @@ window.mekApp = (function () {
     const bgTriggers = gsap.utils.toArray("[data-bg-trigger]");
     const bgElements = document.querySelectorAll("[data-bg-element]");
     const root = document.documentElement;
-
+  
     const defaultColor =
-      getComputedStyle(document.body).backgroundColor.trim() ||
-      "#ffffff";
-
+      getComputedStyle(document.body).backgroundColor.trim() || "#ffffff";
+  
     // Initialize backgrounds
     bgTriggers.forEach(trigger => {
       trigger.style.background = "var(--bg-scroller)";
@@ -1817,81 +1816,87 @@ window.mekApp = (function () {
     bgElements.forEach(element => {
       element.style.background = "var(--bg-scroller)";
     });
-
-    bgTriggers.forEach((trigger, index) => {
-      const colorValue =
+  
+    // Build timelines only once per trigger and reduce overhead
+    bgTriggers.forEach(trigger => {
+      const triggerColor =
         trigger.getAttribute("data-bg-trigger")?.trim() || defaultColor;
-
-      // Check for adjacent trigger elements
+  
+      // Identify previous and next triggers (if any)
       const prevTrigger = trigger.previousElementSibling?.matches("[data-bg-trigger]")
         ? trigger.previousElementSibling
         : null;
       const nextTrigger = trigger.nextElementSibling?.matches("[data-bg-trigger]")
         ? trigger.nextElementSibling
         : null;
-
+  
+      // Determine initial and ending colors for this trigger zone
       const initialColor = prevTrigger
         ? prevTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
         : defaultColor;
       const endingColor = nextTrigger
         ? nextTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
         : defaultColor;
-
+  
+      // Create a single timeline for each trigger
+      // 'scrub' with a small value allows smoother transitions without constant re-renders
       const timeline = gsap.timeline({
         scrollTrigger: {
           trigger: trigger,
-          start: "top bottom-=25%",
-          end: "bottom top+=35%",
-          scrub: true,
-          onEnter: () => { },
-          onLeave: () => { },
-          onEnterBack: () => { },
-          onLeaveBack: () => { }
-        },
+          start: "top center",
+          end: "bottom center",
+          scrub: 0.3
+        }
       });
-
-      // Only do the fromTo animation if there is no previous trigger
+  
+      // If there's no previous trigger, we smoothly transition from the default color
       if (!prevTrigger) {
         timeline.fromTo(
           root,
           { "--bg-scroller": initialColor },
-          { "--bg-scroller": colorValue, ease: "none", duration: 1 }
+          {
+            "--bg-scroller": triggerColor,
+            immediateRender: false,
+            ease: "none",
+            duration: 1
+          }
         );
       }
-
+  
+      // Then transition from the trigger color to the next color
       timeline.to(root, {
         "--bg-scroller": endingColor,
+        immediateRender: false,
         ease: "none",
-        duration: 1,
-        delay: 0.8
+        duration: 1
       });
     });
-
-    // Set initial background color based on visible triggers
+  
+    // Set initial background color based on whichever trigger is in view
+    // This runs once on page load rather than repeatedly for better performance
     const viewportHeight = window.innerHeight;
     const threshold75 = viewportHeight * 0.75;
     const threshold40 = viewportHeight * 0.4;
-
     let initialTrigger = null;
-
-    // Check if any trigger is within threshold on page load
+  
     for (const trigger of bgTriggers) {
       const rect = trigger.getBoundingClientRect();
-
-      if ((rect.top <= threshold75 && rect.top >= 0) ||
-        (rect.bottom >= threshold40 && rect.bottom <= viewportHeight)) {
+      if (
+        (rect.top <= threshold75 && rect.top >= 0) ||
+        (rect.bottom >= threshold40 && rect.bottom <= viewportHeight)
+      ) {
         initialTrigger = trigger;
         break;
       }
     }
-
-    // Set the initial background color
+  
     const initialColor = initialTrigger
       ? initialTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
       : defaultColor;
-
+  
     root.style.setProperty("--bg-scroller", initialColor);
   }
+  
 
   function setupNavListeners() {
     const openNavElements = document.querySelectorAll('[data-nav="open"]');
@@ -1926,50 +1931,158 @@ window.mekApp = (function () {
       ".custom-select-wrapper"
     );
 
-    customSelectWrappers.forEach((wrapper) => {
+    customSelectWrappers.forEach((wrapper, index) => {
       const select = wrapper.querySelector("select");
       const customSelect = wrapper.querySelector(".custom-select");
       const trigger = wrapper.querySelector(".custom-select-trigger");
       const options = wrapper.querySelectorAll(".custom-option");
+      const optionsList = wrapper.querySelector(".custom-options");
+      const selectId = select.id || `custom-select-${index}`;
 
       // Get the inner span that contains the text
       const triggerTextSpan = trigger.querySelector("span");
 
-      // Toggle dropdown
+      // Set ARIA attributes for the custom select
+      customSelect.setAttribute("role", "combobox");
+      customSelect.setAttribute("aria-haspopup", "listbox");
+      customSelect.setAttribute("aria-expanded", "false");
+      customSelect.setAttribute("aria-labelledby", selectId);
+      customSelect.setAttribute("tabindex", "0");
+      
+      // Set ARIA attributes for the options list
+      optionsList.setAttribute("role", "listbox");
+      optionsList.setAttribute("aria-labelledby", selectId);
+      optionsList.id = `options-${selectId}`;
+      
+      // Make sure the original select is accessible but visually hidden
+      select.id = selectId;
+      select.style.position = "absolute";
+      select.style.clip = "rect(0 0 0 0)";
+      select.style.clipPath = "inset(50%)";
+      select.style.height = "1px";
+      select.style.overflow = "hidden";
+      select.style.whiteSpace = "nowrap";
+      select.style.width = "1px";
+
+      // Toggle dropdown on click
       customSelect.addEventListener("click", function (e) {
         e.stopPropagation();
         closeAllCustomSelects(this);
         this.classList.toggle("open");
+        this.setAttribute("aria-expanded", this.classList.contains("open"));
+        
+        // Focus the first option when opening
+        if (this.classList.contains("open") && options.length > 0) {
+          setTimeout(() => options[0].focus(), 100);
+        }
       });
 
-      // Handle option selection
-      options.forEach((option) => {
+      // Toggle dropdown on keydown for the trigger
+      customSelect.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+          e.preventDefault();
+          if (!this.classList.contains("open")) {
+            this.classList.add("open");
+            this.setAttribute("aria-expanded", "true");
+            if (options.length > 0) {
+              setTimeout(() => options[0].focus(), 100);
+            }
+          }
+        } else if (e.key === "Escape") {
+          if (this.classList.contains("open")) {
+            this.classList.remove("open");
+            this.setAttribute("aria-expanded", "false");
+            this.focus();
+          }
+        }
+      });
+
+      // Handle option selection and keyboard navigation
+      options.forEach((option, optionIndex) => {
+        const value = option.getAttribute("data-value");
+        
+        // Set ARIA attributes for each option
+        option.setAttribute("role", "option");
+        option.id = `option-${selectId}-${optionIndex}`;
+        option.setAttribute("tabindex", "-1");
+        
+        // Set aria-selected based on initial selection
+        if (select.value === value) {
+          option.setAttribute("aria-selected", "true");
+        } else {
+          option.setAttribute("aria-selected", "false");
+        }
+
         option.addEventListener("click", function (e) {
           e.stopPropagation();
-          const value = this.getAttribute("data-value");
-          const text = this.textContent;
+          selectOption(this, value);
+        });
 
-          // Update only the inner span text
-          triggerTextSpan.textContent = text;
-          select.value = value;
-          customSelect.classList.remove("open");
-          customSelect.style.transform = "rotate(0deg)";
-
-          const event = new Event("change");
-          select.dispatchEvent(event);
+        option.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            selectOption(this, value);
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const nextOption = options[optionIndex + 1] || options[0];
+            nextOption.focus();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            const prevOption = options[optionIndex - 1] || options[options.length - 1];
+            prevOption.focus();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            customSelect.classList.remove("open");
+            customSelect.setAttribute("aria-expanded", "false");
+            customSelect.focus();
+          } else if (e.key === "Tab") {
+            customSelect.classList.remove("open");
+            customSelect.setAttribute("aria-expanded", "false");
+          }
         });
       });
+
+      function selectOption(option, value) {
+        // Update aria-selected for all options
+        options.forEach(opt => {
+          opt.setAttribute("aria-selected", opt === option ? "true" : "false");
+        });
+
+        const text = option.textContent;
+        triggerTextSpan.textContent = text;
+        select.value = value;
+        customSelect.classList.remove("open");
+        customSelect.setAttribute("aria-expanded", "false");
+        customSelect.focus();
+
+        const event = new Event("change");
+        select.dispatchEvent(event);
+      }
 
       // Set initial value
       const selectedOption = select.querySelector("option:checked");
       if (selectedOption) {
         triggerTextSpan.textContent = selectedOption.textContent;
+        
+        // Find and mark the corresponding custom option as selected
+        const matchingOption = Array.from(options).find(
+          opt => opt.getAttribute("data-value") === selectedOption.value
+        );
+        if (matchingOption) {
+          matchingOption.setAttribute("aria-selected", "true");
+        }
       }
 
       // Update custom select when native select changes
       select.addEventListener("change", function () {
         const selected = select.querySelector("option:checked");
         triggerTextSpan.textContent = selected.textContent;
+        
+        // Update aria-selected attributes
+        options.forEach(opt => {
+          const isSelected = opt.getAttribute("data-value") === selected.value;
+          opt.setAttribute("aria-selected", isSelected ? "true" : "false");
+        });
       });
     });
 
