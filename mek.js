@@ -1805,10 +1805,11 @@ window.mekApp = (function () {
     const bgTriggers = gsap.utils.toArray("[data-bg-trigger]");
     const bgElements = document.querySelectorAll("[data-bg-element]");
     const root = document.documentElement;
-  
+
     const defaultColor =
-      getComputedStyle(document.body).backgroundColor.trim() || "#ffffff";
-  
+      getComputedStyle(document.body).backgroundColor.trim() ||
+      "#ffffff";
+
     // Initialize backgrounds
     bgTriggers.forEach(trigger => {
       trigger.style.background = "var(--bg-scroller)";
@@ -1816,84 +1817,79 @@ window.mekApp = (function () {
     bgElements.forEach(element => {
       element.style.background = "var(--bg-scroller)";
     });
-  
-    // Build timelines only once per trigger and reduce overhead
-    bgTriggers.forEach(trigger => {
-      const triggerColor =
+
+    bgTriggers.forEach((trigger, index) => {
+      const colorValue =
         trigger.getAttribute("data-bg-trigger")?.trim() || defaultColor;
-  
-      // Identify previous and next triggers (if any)
+
+      // Check for adjacent trigger elements
       const prevTrigger = trigger.previousElementSibling?.matches("[data-bg-trigger]")
         ? trigger.previousElementSibling
         : null;
       const nextTrigger = trigger.nextElementSibling?.matches("[data-bg-trigger]")
         ? trigger.nextElementSibling
         : null;
-  
-      // Determine initial and ending colors for this trigger zone
+
       const initialColor = prevTrigger
         ? prevTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
         : defaultColor;
       const endingColor = nextTrigger
         ? nextTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
         : defaultColor;
-  
-      // Create a single timeline for each trigger
-      // 'scrub' with a small value allows smoother transitions without constant re-renders
+
       const timeline = gsap.timeline({
         scrollTrigger: {
           trigger: trigger,
-          start: "top center",
-          end: "bottom center",
-          scrub: 0.3
-        }
+          start: "top bottom-=25%",
+          end: "bottom top+=35%",
+          scrub: true,
+          onEnter: () => { },
+          onLeave: () => { },
+          onEnterBack: () => { },
+          onLeaveBack: () => { }
+        },
       });
-  
-      // If there's no previous trigger, we smoothly transition from the default color
+
+      // Only do the fromTo animation if there is no previous trigger
       if (!prevTrigger) {
         timeline.fromTo(
           root,
           { "--bg-scroller": initialColor },
-          {
-            "--bg-scroller": triggerColor,
-            immediateRender: false,
-            ease: "none",
-            duration: 1
-          }
+          { "--bg-scroller": colorValue, ease: "none", duration: 1 }
         );
       }
-  
-      // Then transition from the trigger color to the next color
+
       timeline.to(root, {
         "--bg-scroller": endingColor,
-        immediateRender: false,
         ease: "none",
-        duration: 1
+        duration: 1,
+        delay: 0.8
       });
     });
-  
-    // Set initial background color based on whichever trigger is in view
-    // This runs once on page load rather than repeatedly for better performance
+
+    // Set initial background color based on visible triggers
     const viewportHeight = window.innerHeight;
     const threshold75 = viewportHeight * 0.75;
     const threshold40 = viewportHeight * 0.4;
+
     let initialTrigger = null;
-  
+
+    // Check if any trigger is within threshold on page load
     for (const trigger of bgTriggers) {
       const rect = trigger.getBoundingClientRect();
-      if (
-        (rect.top <= threshold75 && rect.top >= 0) ||
-        (rect.bottom >= threshold40 && rect.bottom <= viewportHeight)
-      ) {
+
+      if ((rect.top <= threshold75 && rect.top >= 0) ||
+        (rect.bottom >= threshold40 && rect.bottom <= viewportHeight)) {
         initialTrigger = trigger;
         break;
       }
     }
-  
+
+    // Set the initial background color
     const initialColor = initialTrigger
       ? initialTrigger.getAttribute("data-bg-trigger")?.trim() || defaultColor
       : defaultColor;
-  
+
     root.style.setProperty("--bg-scroller", initialColor);
   }
   
