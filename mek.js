@@ -1543,6 +1543,40 @@ window.mekApp = (function () {
       const smoother = ScrollSmoother.create({
         smooth: 1.25,
         effects: true,
+        normalizeScroll: true, // This helps with anchor links
+        ignoreMobileResize: true
+      });
+
+      // Handle anchor links
+      // Handle URL hash on load
+      if (window.location.hash) {
+        const targetId = window.location.hash.substring(1);
+        const target = document.getElementById(targetId);
+        if (target) {
+          const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - 100;
+          smoother.scrollTo(targetPosition, {
+            duration: 1,
+            ease: "power2.inOut"
+          });
+        }
+      }
+
+      // Handle anchor link clicks
+      document.querySelectorAll('a[href*="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href').split('#')[1];
+          if (!targetId) return; // Skip empty anchors
+          
+          const target = document.getElementById(targetId);
+          if (target) {
+            const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - 100;
+            smoother.scrollTo(targetPosition, {
+              duration: 1,
+              ease: "power2.inOut"
+            });
+          }
+        });
       });
 
       // Smooth load animations
